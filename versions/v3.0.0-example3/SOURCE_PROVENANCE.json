@@ -1,0 +1,15 @@
+{
+  "base_archive": "C:\\Users\\Xuan\\Desktop\\嵌赛\\lab_ex1_mipi_dsi_SC500_7inch_v2.zip",
+  "osd_archive": "C:\\Users\\Xuan\\Desktop\\嵌赛\\lab_ex3_osd_SC500_720P.zip",
+  "design_document": "C:\\Users\\Xuan\\Desktop\\嵌赛\\lab_ex_3.docx",
+  "sha256": {
+    "lab_ex1_mipi_dsi_SC500_7inch_v2.zip": "66dde595976a282c095066703f92c66ac401d8168271d86d40b406b94ab9189e",
+    "lab_ex3_osd_SC500_720P.zip": "a66659fb3fe4ea8d3fd3e20f014c34246663889972e379a57bb875269b6581bf",
+    "lab_ex_3.docx": "0e1eb0faae170c4b1e2a5e2407abffe4cc4dfc54ba4e790668f79ff5ea0891c3"
+  },
+  "copied_osd_files": [
+    "osd_char_lib.v"
+  ],
+  "logo_conversion": "All 25600 alpha/RGB pixels preserved; sparse combinational case converted to synchronous ROM.",
+  "architecture": "Unchanged example-1 capture/ISP/DDR/DSI; add OSD after the existing RGB alignment mixer."
+}

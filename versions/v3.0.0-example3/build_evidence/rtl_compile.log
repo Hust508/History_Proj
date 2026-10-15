@@ -1,0 +1,13 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/user_source/hdl_source/osd/dsi_osd_overlay.v" into library work
+INFO: [VRFC 10-311] analyzing module dsi_osd_overlay
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/user_source/hdl_source/osd/osd_logo_rom.v" into library work
+INFO: [VRFC 10-311] analyzing module osd_logo_rom
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/user_source/hdl_source/osd/osd_char_lib.v" into library work
+INFO: [VRFC 10-311] analyzing module osd_char_lib
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/user_source/hdl_source/video_out.v" into library work
+INFO: [VRFC 10-311] analyzing module video_out
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/verification/osd_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module osd_tb
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex3_dsi/verification/crop_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module w128_d512_fifo
+INFO: [VRFC 10-311] analyzing module crop_tb

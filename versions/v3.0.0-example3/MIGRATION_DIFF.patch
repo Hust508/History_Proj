@@ -1,0 +1,4253 @@
+--- example1/user_source/hdl_source/design_top_wrapper.v
++++ example3/user_source/hdl_source/design_top_wrapper.v
+@@ -1,997 +1,1019 @@
+-
+-
+-module design_top_wrapper #(
+-    parameter DISPLAY_TEST_PATTERN = 0 // 0: camera; 1: vendor generated test pattern
+-) (
+-    input wire        I_sys_clk,
+-    input wire        I_rst_n,
+-      
+-    output wire       O_cam_scl,
+-    inout  wire       IO_cam_sda,
+-    output wire       O_cam_24m,
+-    output wire       O_cam_rst,
+-      
+-    inout wire [1:0]  I_button,
+-
+-    output wire       O_screen_pwm,
+-    output wire       O_screen_reset_n,
+-
+-    inout wire        IO_tx_clk_pad_n,
+-    inout wire        IO_tx_clk_pad_p,
+-    inout wire[3:0]   IO_tx_data_pad_n,
+-    inout wire[3:0]   IO_tx_data_pad_p,
+-
+-    inout wire        IO_rx_clk_pad_n, 
+-    inout wire        IO_rx_clk_pad_p, 
+-    inout wire[3:0]   IO_rx_data_pad_n,
+-    inout wire[3:0]   IO_rx_data_pad_p,
+-
+-    output wire[12:0] ddr_addr,
+-    output wire[ 1:0] ddr_ba,
+-    output wire[ 0:0] ddr_cke,
+-    output wire[ 0:0] ddr_odt,
+-    output wire[ 0:0] ddr_cs_n,
+-    output wire       ddr_ras_n,
+-    output wire       ddr_cas_n,
+-    output wire       ddr_we_n,
+-    output wire[ 0:0] ddr_ck_p,
+-    output wire[ 0:0] ddr_ck_n,
+-    inout wire[1:0]   ddr_dm,
+-    inout wire[15:0]  ddr_dq,
+-    inout wire[1:0]   ddr_dqs_p,
+-    inout wire[1:0]   ddr_dqs_n   
+-);
+-
+-
+-    wire        	S_100m_clk;
+-    wire        	S_24m_clk;
+-    wire        	S_dpll_ref_clk;
+-	wire        	S_10m_clk;
+-		
+-	wire        	S_pll_lock;
+-    wire        	S_rst_n;
+-	
+-	wire [15:0] 	S_ae;
+-    wire [15:0] 	S_ag;
+-    wire 			S_cam_cfg_done;
+-    wire 			S_ae_cfg_done;
+-    wire 			S_ae_req; 
+-	
+-	wire        	S_csi_rx_clk;  
+-    wire        	S_hs_rx_valid;  
+-    wire[15:0]  	S_hs_rx_data;   
+-	wire[1:0]   	S_lane_error;
+-	
+-	wire        	S_csi_frame_start;       
+-	wire        	S_csi_frame_end;         
+-	wire        	S_csi_valid;             
+-	wire[31:0]  	S_csi_data;  
+-		
+-	wire        	S_raw10_frame_start; 
+-	wire        	S_raw10_frame_end;   
+-	wire        	S_raw10_valid;       
+-	wire [39:0] 	S_raw10_data;
+-		
+-	wire 			S_axis_tlast;  
+-	wire 			S_axis_tuser;  
+-	wire [39:0]		S_axis_tdata;  
+-	wire 			S_axis_tvalid; 
+-	
+-	wire [39:0]		S_raw_tdata ;
+-	wire			S_raw_tlast ;
+-	wire 			S_raw_tvalid;
+-	wire 			S_raw_tuser ;
+-	
+-	wire			S_ISP_O_tready;
+-	wire [127:0]	S_ISP_O_tdata ;
+-	wire 			S_ISP_O_tlast ;
+-	wire 			S_ISP_O_tuser ;
+-	wire 			S_ISP_O_tvalid; 
+-	
+-
+-    wire        S_ddr_clk;
+-    wire        S_dsi_tx_clk;
+-    wire        S_display_rst_n;
+-    wire        S_video_out_rst_n;
+-
+-
+-    wire        S_vi_128b_frame_start;
+-    wire        S_vi_128b_valid;      
+-    wire[127:0] S_vi_128b_data;    
+-    
+-    wire        S_video_out_rd_busy;
+-    wire        S_video_in_wr_busy; 
+-    wire[1:0]   S_video_out_rp;     
+-
+-    wire        S_ddr_user_wr_en;       
+-    wire        S_ddr_user_rd_en;       
+-    wire[24:0]  S_ddr_user_addr;        
+-    wire[127:0] S_ddr_user_wr_data;     
+-    wire        S_ddr_user_ready;       
+-    wire        S_ddr_user_rd_valid;    
+-    wire[127:0] S_ddr_user_rd_data;     
+-
+-    wire        S_vi_ddr_wr_en;   
+-    wire[24:0]  S_vi_ddr_wr_addr; 
+-    wire[127:0] S_vi_ddr_wr_data;
+-    wire        S_vi_ddr_wr_ready;
+-
+-    wire        S_vo_ddr_rd_en;   
+-    wire[24:0]  S_vo_ddr_rd_addr; 
+-    wire        S_vo_ddr_rd_ready;
+-    wire        S_vo_dbg_fifo_rst;
+-    wire        S_vo_dbg_ddr_rd_valid;
+-    wire        S_vo_dbg_fifo_rd_en;
+-    wire        S_vo_dbg_fifo_empty;
+-
+-    wire        S_init_calib_complete; 
+-    wire[24:0]  S_mc_app_addr;          
+-    wire[2:0]   S_mc_app_cmd;           
+-    wire        S_mc_app_en;            
+-    wire[127:0] S_mc_app_wdf_data;      
+-    wire        S_mc_app_wdf_end;       
+-    wire[15:0]  S_mc_app_wdf_mask;      
+-    wire        S_mc_app_wdf_wren;      
+-    wire[127:0] S_mc_app_rd_data;       
+-    wire        S_mc_app_rd_data_end;   
+-    wire        S_mc_app_rd_data_valid; 
+-    wire        S_mc_app_rdy;           
+-    wire        S_mc_app_wdf_rdy;       
+-    wire        S_mc_dbg_fifo_afull;
+-    wire        S_mc_dbg_app_rdy;
+-    wire        S_mc_dbg_wdf_rdy;
+-    wire        S_mc_dbg_cmd_pop;
+-
+-    wire        S_vs_vsync;
+-    wire        S_vs_hsync;
+-    wire        S_vs_de;
+-    wire        S_hdmi_user;
+-    wire        S_hdmi_last;
+-    wire        S_video_out_vsync;
+-    wire        S_crop_rd_en;
+-    wire        S_hdmi_out_vsync;
+-    wire        S_hdmi_out_hsync;
+-    wire        S_hdmi_out_de;
+-    wire[23:0]  S_hdmi_out_data;
+-
+-    wire[23:0]  S_video_rd_data;
+-    reg         S_dbg_raw_seen;
+-    reg         S_dbg_isp_seen;
+-    reg         S_dbg_ddr_wr_seen;
+-    reg         S_dbg_ddr_rd_seen;
+-    reg         S_dbg_cam_cfg_seen;
+-    reg         S_dbg_hs_seen;
+-    reg         S_dbg_csi_seen;
+-    reg         S_dbg_raw10_seen;
+-    reg         S_dbg_isp_fs_seen;
+-    reg         S_dbg_isp_valid_seen;
+-    reg         S_dbg_ddr_req_seen;
+-    reg         S_dbg_ddr_ready_seen;
+-    reg [1:0]   S_dbg_raw_seen_sync;
+-    reg [1:0]   S_dbg_isp_seen_sync;
+-    reg [1:0]   S_dbg_ddr_wr_seen_sync;
+-    reg [1:0]   S_dbg_ddr_rd_seen_sync;
+-    reg [1:0]   S_dbg_cam_cfg_seen_sync;
+-    reg [1:0]   S_dbg_hs_seen_sync;
+-    reg [1:0]   S_dbg_csi_seen_sync;
+-    reg [1:0]   S_dbg_raw10_seen_sync;
+-    reg [1:0]   S_dbg_isp_fs_seen_sync;
+-    reg [1:0]   S_dbg_isp_valid_seen_sync;
+-    reg [1:0]   S_dbg_ddr_req_seen_sync;
+-    reg [1:0]   S_dbg_ddr_ready_seen_sync;
+-    reg         S_dbg_video_nonzero_seen;
+-    reg         S_dbg_rd_req_seen;
+-    reg         S_dbg_rd_valid_seen;
+-    reg         S_dbg_rd_nonzero_seen;
+-    reg [1:0]   S_dbg_rd_req_seen_sync;
+-    reg [1:0]   S_dbg_rd_valid_seen_sync;
+-    reg [1:0]   S_dbg_rd_nonzero_seen_sync;
+-    reg         S_dbg_mc_init_seen;
+-    reg         S_dbg_mc_app_rdy_seen;
+-    reg         S_dbg_mc_wdf_rdy_seen;
+-    reg         S_dbg_mc_cmd_pop_seen;
+-    reg [1:0]   S_dbg_mc_init_seen_sync;
+-    reg [1:0]   S_dbg_mc_app_rdy_seen_sync;
+-    reg [1:0]   S_dbg_mc_wdf_rdy_seen_sync;
+-    reg [1:0]   S_dbg_mc_cmd_pop_seen_sync;
+-    // 720p input-format diagnostics.  One RAW10 line from the factory
+-    // 1280-pixel mode contains 1600 bytes, i.e. 400 valid 32-bit CSI words.
+-    reg         S_dbg_hs_valid_d;
+-    reg [10:0]  S_dbg_csi_words;
+-    reg [10:0]  S_dbg_good_lines;
+-    reg         S_dbg_frame_seen_once;
+-    reg         S_dbg_frame_repeat_seen;
+-    reg         S_dbg_width_1280_seen;
+-    reg         S_dbg_height_720_seen;
+-    reg         S_dbg_isp_frame_seen_once;
+-    reg         S_dbg_isp_frame_repeat_seen;
+-    reg [1:0]   S_dbg_frame_repeat_sync;
+-    reg [1:0]   S_dbg_width_1280_sync;
+-    reg [1:0]   S_dbg_height_720_sync;
+-    reg [1:0]   S_dbg_isp_frame_repeat_sync;
+-    wire[3:0]   S_vs_debug_status;
+-    wire        S_lane_error_any;
+-
+-
+-
+-    wire S_lp_config_done;
+-    wire S_mipi_tx_dpll_locked;
+-    wire S_lp_tx_p, S_lp_tx_n;
+-    wire S_32b_vsync, S_32b_hsync, S_32b_de;
+-    wire [31:0] S_32b_data;
+-    wire S_hs_tx_valid, S_hs_tx_last, S_hs_tx_ready;
+-    wire [31:0] S_hs_tx_data;
+-    wire S_mixer_vsync, S_mixer_hsync, S_mixer_de;
+-    wire [23:0] S_mixer_data;
+-    wire [23:0] S_vs_data;
+-    reg [31:0] S_delay_cnt;
+-    wire S_lp_config_start;
+-
+-    // Vendor reference uses an always-powered 3.3 V panel, released reset,
+-    // continuous backlight enable, and a 10 ms settling time at 10 MHz.
+-    // No panel-specific reset pulse duration is supplied; do not invent one.
+-    // FFC pin 33 is TP-RES on this screen assembly; it is NOT LCD RESX.
+-    assign O_screen_reset_n = 1'b1;
+-    always @(posedge S_10m_clk or negedge S_lp_reset_n) begin
+-        if (!S_lp_reset_n) S_delay_cnt <= 32'd0;
+-        else if (S_delay_cnt < 32'd10000000) S_delay_cnt <= S_delay_cnt + 1'b1;
+-    end
+-    assign S_lp_config_start = (S_delay_cnt >= 32'd100000);
+-
+-    // Blank backlight until initialization and ten-frame settling complete.
+-    // At ~61 Hz, 200 ms exceeds the ten-VSYNC interval in JD9165BA Fig.5.1.
+-    reg [1:0] S_init_done_lp;
+-    reg [21:0] S_backlight_delay;
+-    always @(posedge S_10m_clk or negedge S_lp_reset_n) begin
+-        if (!S_lp_reset_n) begin
+-            S_init_done_lp <= 0;
+-            S_backlight_delay <= 0;
+-        end else begin
+-            S_init_done_lp <= {S_init_done_lp[0], S_lp_config_done};
+-            if (!S_init_done_lp[1]) S_backlight_delay <= 0;
+-            else if (S_backlight_delay < 22'd2000000)
+-                S_backlight_delay <= S_backlight_delay + 1'b1;
+-        end
+-    end
+-    assign O_screen_pwm = (S_backlight_delay == 22'd2000000);
+-    assign S_video_out_vsync = S_vs_vsync; // vendor DSI VS is active high
+-	
+-	
+-    assign S_rst_n 		= S_pll_lock;
+-    wire S_display_async_n = S_rst_n & S_mipi_tx_dpll_locked & S_lp_config_done;
+-    wire S_lp_async_n = S_rst_n & S_mipi_tx_dpll_locked;
+-    wire S_lp_reset_n, S_dsi_ready_n;
+-    display_reset_sync u_read_reset (.I_clk(S_ddr_clk), .I_async_reset_n(S_display_async_n), .O_reset_n(S_display_rst_n));
+-    display_reset_sync u_dsi_reset (.I_clk(S_dsi_tx_clk), .I_async_reset_n(S_display_async_n), .O_reset_n(S_dsi_ready_n));
+-    display_reset_sync u_lp_reset (.I_clk(S_10m_clk), .I_async_reset_n(S_lp_async_n), .O_reset_n(S_lp_reset_n));
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_raw_seen <= 1'b0;
+-        else if(S_raw10_frame_start | S_axis_tvalid)
+-            S_dbg_raw_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_isp_seen <= 1'b0;
+-        else if(S_ISP_O_tuser | S_ISP_O_tvalid)
+-            S_dbg_isp_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_ddr_wr_seen <= 1'b0;
+-        else if(S_vi_ddr_wr_en)
+-            S_dbg_ddr_wr_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_ddr_rd_seen <= 1'b0;
+-        else if(S_ddr_user_rd_valid)
+-            S_dbg_ddr_rd_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_24m_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_cam_cfg_seen <= 1'b0;
+-        else if(S_cam_cfg_done)
+-            S_dbg_cam_cfg_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_hs_seen <= 1'b0;
+-        else if(S_hs_rx_valid)
+-            S_dbg_hs_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_csi_seen <= 1'b0;
+-        else if(S_csi_frame_start | S_csi_valid)
+-            S_dbg_csi_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_raw10_seen <= 1'b0;
+-        else if(S_raw10_frame_start | S_raw10_valid)
+-            S_dbg_raw10_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_isp_fs_seen <= 1'b0;
+-        else if(S_ISP_O_tuser)
+-            S_dbg_isp_fs_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_isp_valid_seen <= 1'b0;
+-        else if(S_ISP_O_tvalid)
+-            S_dbg_isp_valid_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_ddr_req_seen <= 1'b0;
+-        else if(S_vi_ddr_wr_en)
+-            S_dbg_ddr_req_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_ddr_ready_seen <= 1'b0;
+-        else if(S_ddr_user_ready)
+-            S_dbg_ddr_ready_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
+-        if(!S_video_out_rst_n)
+-            S_dbg_rd_req_seen <= 1'b0;
+-        else if(S_vo_ddr_rd_en)
+-            S_dbg_rd_req_seen <= 1'b1;
+-    end
+-
+-    // Count CSI payload words between HS packet boundaries.  This avoids
+-    // probing an internal net of csi_unpacket_2lane (which ChipWatcher cannot
+-    // legally connect to) and verifies the received line length externally.
+-    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+-        if(!S_rst_n) begin
+-            S_dbg_hs_valid_d          <= 1'b0;
+-            S_dbg_csi_words           <= 11'd0;
+-            S_dbg_good_lines          <= 11'd0;
+-            S_dbg_frame_seen_once     <= 1'b0;
+-            S_dbg_frame_repeat_seen   <= 1'b0;
+-            S_dbg_width_1280_seen     <= 1'b0;
+-            S_dbg_height_720_seen     <= 1'b0;
+-            S_dbg_isp_frame_seen_once <= 1'b0;
+-            S_dbg_isp_frame_repeat_seen <= 1'b0;
+-        end
+-        else begin
+-            S_dbg_hs_valid_d <= S_hs_rx_valid;
+-
+-            if(!S_dbg_hs_valid_d && S_hs_rx_valid)
+-                S_dbg_csi_words <= 11'd0;
+-            else if(S_csi_valid)
+-                S_dbg_csi_words <= S_dbg_csi_words + 11'd1;
+-
+-            // A packet with CSI payload is an image line.  Ignore short
+-            // frame-start/frame-end packets, whose payload count is zero.
+-            if(S_dbg_hs_valid_d && !S_hs_rx_valid && (S_dbg_csi_words != 0)) begin
+-                if(S_dbg_csi_words == 11'd400) begin
+-                    S_dbg_width_1280_seen <= 1'b1;
+-                    S_dbg_good_lines <= S_dbg_good_lines + 11'd1;
+-                end
+-            end
+-
+-            if(S_csi_frame_start) begin
+-                if(S_dbg_frame_seen_once) begin
+-                    S_dbg_frame_repeat_seen <= 1'b1;
+-                    if(S_dbg_good_lines == 11'd720)
+-                        S_dbg_height_720_seen <= 1'b1;
+-                end
+-                else
+-                    S_dbg_frame_seen_once <= 1'b1;
+-                S_dbg_good_lines <= 11'd0;
+-            end
+-
+-            if(S_ISP_O_tuser) begin
+-                if(S_dbg_isp_frame_seen_once)
+-                    S_dbg_isp_frame_repeat_seen <= 1'b1;
+-                else
+-                    S_dbg_isp_frame_seen_once <= 1'b1;
+-            end
+-        end
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
+-        if(!S_video_out_rst_n)
+-            S_dbg_rd_valid_seen <= 1'b0;
+-        else if(S_ddr_user_rd_valid)
+-            S_dbg_rd_valid_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_dsi_tx_clk or negedge S_video_out_rst_n) begin
+-        if(!S_video_out_rst_n)
+-            S_dbg_rd_nonzero_seen <= 1'b0;
+-        else if(S_crop_rd_en && (S_video_rd_data != 24'd0))
+-            S_dbg_rd_nonzero_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_mc_init_seen <= 1'b0;
+-        else if(S_init_calib_complete)
+-            S_dbg_mc_init_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_mc_app_rdy_seen <= 1'b0;
+-        else if(S_mc_dbg_app_rdy)
+-            S_dbg_mc_app_rdy_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_mc_wdf_rdy_seen <= 1'b0;
+-        else if(S_mc_dbg_wdf_rdy)
+-            S_dbg_mc_wdf_rdy_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+-        if(!S_rst_n)
+-            S_dbg_mc_cmd_pop_seen <= 1'b0;
+-        else if(S_mc_dbg_cmd_pop)
+-            S_dbg_mc_cmd_pop_seen <= 1'b1;
+-    end
+-
+-    always @(posedge S_dsi_tx_clk or negedge S_display_rst_n) begin
+-        if(!S_display_rst_n) begin
+-            S_dbg_cam_cfg_seen_sync <= 2'b00;
+-            S_dbg_hs_seen_sync      <= 2'b00;
+-            S_dbg_csi_seen_sync     <= 2'b00;
+-            S_dbg_raw10_seen_sync   <= 2'b00;
+-            S_dbg_raw_seen_sync    <= 2'b00;
+-            S_dbg_isp_seen_sync    <= 2'b00;
+-            S_dbg_ddr_wr_seen_sync <= 2'b00;
+-            S_dbg_ddr_rd_seen_sync <= 2'b00;
+-            S_dbg_isp_fs_seen_sync  <= 2'b00;
+-            S_dbg_isp_valid_seen_sync <= 2'b00;
+-            S_dbg_ddr_req_seen_sync <= 2'b00;
+-            S_dbg_ddr_ready_seen_sync <= 2'b00;
+-            S_dbg_video_nonzero_seen <= 1'b0;
+-            S_dbg_rd_req_seen_sync <= 2'b00;
+-            S_dbg_rd_valid_seen_sync <= 2'b00;
+-            S_dbg_rd_nonzero_seen_sync <= 2'b00;
+-            S_dbg_mc_init_seen_sync <= 2'b00;
+-            S_dbg_mc_app_rdy_seen_sync <= 2'b00;
+-            S_dbg_mc_wdf_rdy_seen_sync <= 2'b00;
+-            S_dbg_mc_cmd_pop_seen_sync <= 2'b00;
+-            S_dbg_frame_repeat_sync <= 2'b00;
+-            S_dbg_width_1280_sync <= 2'b00;
+-            S_dbg_height_720_sync <= 2'b00;
+-            S_dbg_isp_frame_repeat_sync <= 2'b00;
+-        end
+-        else begin
+-            S_dbg_cam_cfg_seen_sync <= {S_dbg_cam_cfg_seen_sync[0], S_dbg_cam_cfg_seen};
+-            S_dbg_hs_seen_sync      <= {S_dbg_hs_seen_sync[0],      S_dbg_hs_seen};
+-            S_dbg_csi_seen_sync     <= {S_dbg_csi_seen_sync[0],     S_dbg_csi_seen};
+-            S_dbg_raw10_seen_sync   <= {S_dbg_raw10_seen_sync[0],   S_dbg_raw10_seen};
+-            S_dbg_raw_seen_sync    <= {S_dbg_raw_seen_sync[0],    S_dbg_raw_seen};
+-            S_dbg_isp_seen_sync    <= {S_dbg_isp_seen_sync[0],    S_dbg_isp_seen};
+-            S_dbg_ddr_wr_seen_sync <= {S_dbg_ddr_wr_seen_sync[0], S_dbg_ddr_wr_seen};
+-            S_dbg_ddr_rd_seen_sync <= {S_dbg_ddr_rd_seen_sync[0], S_dbg_ddr_rd_seen};
+-            S_dbg_isp_fs_seen_sync  <= {S_dbg_isp_fs_seen_sync[0],  S_dbg_isp_fs_seen};
+-            S_dbg_isp_valid_seen_sync <= {S_dbg_isp_valid_seen_sync[0], S_dbg_isp_valid_seen};
+-            S_dbg_ddr_req_seen_sync <= {S_dbg_ddr_req_seen_sync[0], S_dbg_ddr_req_seen};
+-            S_dbg_ddr_ready_seen_sync <= {S_dbg_ddr_ready_seen_sync[0], S_dbg_ddr_ready_seen};
+-            S_dbg_rd_req_seen_sync <= {S_dbg_rd_req_seen_sync[0], S_dbg_rd_req_seen};
+-            S_dbg_rd_valid_seen_sync <= {S_dbg_rd_valid_seen_sync[0], S_dbg_rd_valid_seen};
+-            S_dbg_rd_nonzero_seen_sync <= {S_dbg_rd_nonzero_seen_sync[0], S_dbg_rd_nonzero_seen};
+-            S_dbg_mc_init_seen_sync <= {S_dbg_mc_init_seen_sync[0], S_dbg_mc_init_seen};
+-            S_dbg_mc_app_rdy_seen_sync <= {S_dbg_mc_app_rdy_seen_sync[0], S_dbg_mc_app_rdy_seen};
+-            S_dbg_mc_wdf_rdy_seen_sync <= {S_dbg_mc_wdf_rdy_seen_sync[0], S_dbg_mc_wdf_rdy_seen};
+-            S_dbg_mc_cmd_pop_seen_sync <= {S_dbg_mc_cmd_pop_seen_sync[0], S_dbg_mc_cmd_pop_seen};
+-            S_dbg_frame_repeat_sync <= {S_dbg_frame_repeat_sync[0], S_dbg_frame_repeat_seen};
+-            S_dbg_width_1280_sync <= {S_dbg_width_1280_sync[0], S_dbg_width_1280_seen};
+-            S_dbg_height_720_sync <= {S_dbg_height_720_sync[0], S_dbg_height_720_seen};
+-            S_dbg_isp_frame_repeat_sync <= {S_dbg_isp_frame_repeat_sync[0], S_dbg_isp_frame_repeat_seen};
+-            if(S_crop_rd_en && (S_video_rd_data != 24'd0))
+-                S_dbg_video_nonzero_seen <= 1'b1;
+-        end
+-    end
+-
+-    assign S_lane_error_any = |S_lane_error;
+-
+-    assign S_vo_dbg_fifo_rst = 1'b0;
+-    assign S_vo_dbg_ddr_rd_valid = 1'b0;
+-    assign S_vo_dbg_fifo_rd_en = 1'b0;
+-    assign S_vo_dbg_fifo_empty = 1'b0;
+-    assign S_mc_dbg_fifo_afull = 1'b0;
+-    assign S_mc_dbg_app_rdy = 1'b0;
+-    assign S_mc_dbg_wdf_rdy = 1'b0;
+-    assign S_mc_dbg_cmd_pop = 1'b0;
+-
+-    // On-screen bring-up status, from left to right in DEBUG_MODE=3:
+-    // I2C configuration completed, MIPI HS activity seen, repeated CSI frames,
+-    // and a 1280-pixel RAW10 line (400 x 32-bit CSI payload words) seen.
+-    assign S_vs_debug_status = {
+-        S_dbg_width_1280_sync[1],
+-        S_dbg_frame_repeat_sync[1],
+-        S_dbg_hs_seen_sync[1],
+-        S_dbg_cam_cfg_seen_sync[1]
+-    };
+-	
+-	assign O_cam_rst 	= 1'b1;
+-    assign O_cam_24m 	= S_24m_clk;
+-	
+-	
+-	
+-	
+-    PLL u_PLL(
+-        .refclk      ( I_sys_clk         ),
+-        .reset    	 ( ~I_rst_n          ),
+-        
+-        .clk0_out    ( S_100m_clk        ),
+-        .clk1_out    ( S_24m_clk         ),
+-
+-        .clk2_out    ( S_dpll_ref_clk ),
+-        .clk3_out    ( S_10m_clk ),
+-
+-        .lock        ( S_pll_lock        )
+-
+-    );
+-
+-
+-	
+-
+-  
+-  ae_set u_ae_set (
+-      .I_clk(S_24m_clk),
+-      .I_rst(~S_rst_n),
+-      .I_btn({I_button,2'b11}),
+-      .I_cam_cfg_done(S_cam_cfg_done),
+-      .I_ae_cfg_done(S_ae_cfg_done),
+-      .O_ae_req(S_ae_req),
+-      .O_ae(S_ae),
+-      .O_ag(S_ag)
+-  );
+-  
+-    uicfgcs500_720p #(
+-      .CLK_DIV(24000000 / 100000 - 1)
+-  ) u_uicfgcs500 (
+-      .I_clk(S_24m_clk),  //系统时钟输入
+-      .I_rst_n(S_rst_n),  //系统复位输入
+-      .I_ae_req(S_ae_req),
+-      .I_ae(S_ae),
+-      .I_ag(S_ag),
+-      .O_cam_scl(O_cam_scl),  //I2C总线，SCL时钟
+-      .IO_cam_sda(IO_cam_sda),  //I2C总线，SDA数据
+-      .O_cfg_done(S_cam_cfg_done),  //摄像头寄存器初始化完成
+-      .O_ae_cfg_done(S_ae_cfg_done)  //AE配置完成
+-  );
+-	
+-    mipi_dphy_rx_ph1p_mipiio_wrapper#(
+-        .DPHY_RX_LOCATION      ( "DPHY0" ),
+-        .HS_EQUALIZER          ( "0dB"   ),//"0dB","1.5dB","3dB","4.5dB","6dB","7.5dB","9dB","10.5dB"
+-        .HS_VGA_GAIN           ( "8dB" ),//"-3dB","-1.5dB","0dB","1.5dB","3dB","4.5dB","6dB","7.5dB"
+-        .LANE_NUM              ( 2       ),
+-        .BYTE_NUM              ( 1       )
+-    )u_mipi_dphy_rx_ph1p_mipiio_wrapper(
+-        .I_lp_clk              ( S_100m_clk       ),
+-        .I_rst                 ( ~S_rst_n         ),
+-
+-        .I_clk_lane_in_delay   ( 6'd0             ),
+-        .I_data_lane0_in_delay ( 6'd0             ),
+-        .I_data_lane1_in_delay ( 6'd0             ),
+-        .I_data_lane2_in_delay ( 6'd0             ),
+-        .I_data_lane3_in_delay ( 6'd0             ),
+-
+-        .I_lane_invert         ( 4'b0000          ),
+-     
+-        .O_hs_rx_clk           ( S_csi_rx_clk     ),
+-        .O_hs_rx_valid         ( S_hs_rx_valid    ),
+-        .O_hs_rx_data          ( S_hs_rx_data     ),
+-      
+-        .O_lp_rx_lane0_p       (  ),
+-        .O_lp_rx_lane0_n       (  ),
+-      
+-        .I_lp_tx_en            ( 1'b0             ),
+-        .I_lp_tx_lane0_p       ( 1'b1             ),
+-        .I_lp_tx_lane0_n       ( 1'b1             ),
+-      
+-        .O_lane_match_error    (                  ),
+-        .O_lane_error          ( S_lane_error     ),
+-      
+-        .IO_rx_clk_pad_n       ( IO_rx_clk_pad_n  ),
+-        .IO_rx_clk_pad_p       ( IO_rx_clk_pad_p  ),
+-        .IO_rx_data_pad_n      ( IO_rx_data_pad_n ),
+-        .IO_rx_data_pad_p      ( IO_rx_data_pad_p )
+-    );
+-	
+-	
+- //  cwc cwc_inst
+- //(
+- //    .probe0(S_hs_rx_valid),
+- //    .probe1(S_hs_rx_data),
+- //    .probe2(S_lane_error),
+- //    .clk(S_csi_rx_clk)
+- //);
+-
+- //csi 解码为RAW数据
+-csi_unpacket_2lane u_csi_unpacket(
+-.I_clk                 ( S_csi_rx_clk       ),
+-.I_rst_n               ( S_rst_n        	),
+-.I_hs_valid            ( S_hs_rx_valid     ),
+-.I_hs_data             ( S_hs_rx_data      ),
+-
+-.O_csi_frame_start     ( S_csi_frame_start ),
+-.O_csi_frame_end       ( S_csi_frame_end   ),
+-.O_csi_valid           ( S_csi_valid       ),
+-.O_csi_data            ( S_csi_data        )
+-);
+-
+-
+-//解码为RAW8
+-raw10_unpacket_2lane u_raw10_unpacket (
+-.I_clk  (S_csi_rx_clk),
+-.I_rst_n(S_rst_n),
+-
+-.I_csi_frame_start(S_csi_frame_start),
+-.I_csi_frame_end  (S_csi_frame_end),
+-.I_csi_valid      (S_csi_valid),
+-.I_csi_data       (S_csi_data),
+-
+-.O_raw10_frame_start(S_raw10_frame_start),
+-.O_raw10_frame_end  (S_raw10_frame_end),
+-.O_raw10_valid      (S_raw10_valid),
+-.O_raw10_data       (S_raw10_data)
+-  );
+-
+-
+-//将数据转为stream流
+-uial2axis #(
+-.IMG_WIDTH(1280),
+-.IMG_HEIGHT(720),
+-.INPUT_DATA_WIDTH(40)
+-) 
+-u_uial2axis (
+-.I_native_clk(S_csi_rx_clk),
+-.I_rst_n     (S_rst_n),
+-.I_data      (S_raw10_data       ),
+-.I_data_valid(S_raw10_valid      ),
+-.I_data_start(S_raw10_frame_start),
+-.I_data_end  (S_raw10_frame_end  ),
+-.axis_tvalid (S_axis_tvalid),
+-.axis_tdata  (S_axis_tdata ),
+-.axis_tuser  (S_axis_tuser ),
+-.axis_tlast  (S_axis_tlast )
+-);
+-	
+-
+-// SC500 factory HD mode already outputs native 1280x720 RAW10.
+-assign S_raw_tdata  = S_axis_tdata;
+-assign S_raw_tvalid = S_axis_tvalid;
+-assign S_raw_tlast  = S_axis_tlast;
+-assign S_raw_tuser  = S_axis_tuser;
+-
+-
+-//cwc1 cwc1_Inst
+-//  (
+-//      .probe0(S_axis_tuser),
+-//      .probe1(S_axis_tvalid),
+-//      .probe2(S_axis_tlast),
+-//      .probe3(S_axis_tdata),
+-//      .probe4(S_ISP_O_tuser),
+-//      .probe5(S_ISP_O_tvalid),
+-//      .probe6(S_ISP_O_tlast),
+-//      .probe7(S_ISP_O_tdata),
+-//      .probe8 (S_raw_tdata ),
+-//      .probe9 (S_raw_tlast ),
+-//      .probe10(S_raw_tvalid),
+-//      .probe11(S_raw_tuser ),
+-//      .clk(S_csi_rx_clk)
+-//  );
+-
+-
+-//ISP算法顶层模块
+-isp_top u_isp_top (
+-.axi4s_video_aclk(S_csi_rx_clk),
+-.I_rst_n         (S_rst_n),
+-.I_tlast         (S_raw_tlast	),
+-.I_tuser         (S_raw_tuser	),
+-.I_tdata         (S_raw_tdata	),
+-.I_tvalid        (S_raw_tvalid	),
+-.I_tdest         (),
+-.O_tready        (S_ISP_O_tready),
+-.O_tdata         (S_ISP_O_tdata ),
+-.O_tlast         (S_ISP_O_tlast ),
+-.O_tuser         (S_ISP_O_tuser ),
+-.O_tvalid        (S_ISP_O_tvalid),
+-.I_tready        ()
+-  );
+-
+-
+-    video_in u_video_in(
+-        .I_rst_n              (  S_rst_n             ),
+-
+-        .I_camera_clk         ( S_csi_rx_clk          ),
+-        .I_camera_frame_start ( S_ISP_O_tuser  ),
+-        .I_camera_valid       ( S_ISP_O_tvalid ),
+-        .I_camera_data        ( S_ISP_O_tdata  ),
+-        .I_mipi_rx_error      ( 1'b0			      ),
+-
+-        .I_ddr_clk            ( S_ddr_clk             ),
+-		.I_display_pause      ( 1'b0                  ),
+-        .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
+-        .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
+-        .O_video_out_rp       ( S_video_out_rp        ),
+-
+-        .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
+-        .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
+-        .O_ddr_user_wr_data   ( S_vi_ddr_wr_data      ),
+-        .I_ddr_user_ready     ( S_ddr_user_ready      )
+-    );
+-
+-
+-
+-    assign S_ddr_user_wr_en    = S_vi_ddr_wr_en;
+-
+-    assign S_ddr_user_rd_en    = S_vo_ddr_rd_en;
+-
+-    assign S_ddr_user_addr     = S_vi_ddr_wr_en ? S_vi_ddr_wr_addr :
+-                                 S_vo_ddr_rd_en ? S_vo_ddr_rd_addr : 'd0;
+-
+-    assign S_ddr_user_wr_data  = S_vi_ddr_wr_data;
+-
+-
+-    assign S_video_out_rst_n = S_display_rst_n;
+-
+-    video_out u_video_out(
+-        .I_rst_n             ( S_video_out_rst_n    ),
+-        .I_ddr_clk           ( S_ddr_clk            ),
+- 
+-        .O_video_out_rd_busy ( S_video_out_rd_busy  ),
+-        .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
+-        .I_video_out_rp      ( S_video_out_rp       ),
+- 
+-        .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
+-        .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
+-        .I_ddr_user_ready    ( S_ddr_user_ready     ),
+-        .I_ddr_user_rd_valid ( S_ddr_user_rd_valid  ),
+-        .I_ddr_user_rd_data  ( S_ddr_user_rd_data   ),
+-
+-        .I_dsi_clk           ( S_dsi_tx_clk     ),
+-        .I_video_vsync       ( S_video_out_vsync    ),
+-        .I_video_rd_en       ( S_crop_rd_en  ),
+-        .O_vdieo_data        ( S_video_rd_data      )
+-    );
+-
+-
+-
+-    mc_to_user_interface u_mc_to_user_interface(
+-        .I_clk                   ( S_ddr_clk               ),
+-        .I_rst_n                 ( S_rst_n                 ),
+-
+-        .I_ddr_user_wr_en        ( S_ddr_user_wr_en        ),
+-        .I_ddr_user_rd_en        ( S_ddr_user_rd_en        ),
+-        .I_ddr_user_addr         ( S_ddr_user_addr         ),
+-        .I_ddr_user_wr_data      ( S_ddr_user_wr_data      ),
+-        .O_ddr_user_ready        ( S_ddr_user_ready        ),
+-        .O_ddr_user_rd_valid     ( S_ddr_user_rd_valid     ),
+-        .O_ddr_user_rd_data      ( S_ddr_user_rd_data      ),
+-            
+-        .O_mc_app_en             ( S_mc_app_en             ),
+-        .O_mc_app_addr           ( S_mc_app_addr           ),
+-        .O_mc_app_cmd            ( S_mc_app_cmd            ),
+-        .I_mc_app_rdy            ( S_mc_app_rdy            ),
+-        .O_mc_app_wdf_wren       ( S_mc_app_wdf_wren       ),
+-        .O_mc_app_wdf_data       ( S_mc_app_wdf_data       ),
+-        .O_mc_app_wdf_end        ( S_mc_app_wdf_end        ),
+-        .O_mc_app_wdf_mask       ( S_mc_app_wdf_mask       ),
+-        .I_mc_app_wdf_rdy        ( S_mc_app_wdf_rdy        ),
+-        .I_mc_app_rd_data        ( S_mc_app_rd_data        ),
+-        .I_mc_app_rd_data_end    ( S_mc_app_rd_data_end    ),
+-        .I_mc_app_rd_data_valid  ( S_mc_app_rd_data_valid  )
+-    );
+-
+-
+-
+-    ph1p35_324_ddr_wrapper u_ph1p35_324_ddr_wrapper(
+-        .I_sys_clk              ( S_100m_clk             ),
+-        .I_sys_rst_n            ( S_rst_n                ),
+-
+-        .O_ddr_clk              ( S_ddr_clk              ),
+-        .O_init_calib_complete  ( S_init_calib_complete  ),
+-        .I_mc_app_addr          ( S_mc_app_addr          ),
+-        .I_mc_app_cmd           ( S_mc_app_cmd           ),
+-        .I_mc_app_en            ( S_mc_app_en            ),
+-        .I_mc_app_wdf_data      ( S_mc_app_wdf_data      ),
+-        .I_mc_app_wdf_end       ( S_mc_app_wdf_end       ),
+-        .I_mc_app_wdf_mask      ( S_mc_app_wdf_mask      ),
+-        .I_mc_app_wdf_wren      ( S_mc_app_wdf_wren      ),
+-        .O_mc_app_rd_data       ( S_mc_app_rd_data       ),
+-        .O_mc_app_rd_data_end   ( S_mc_app_rd_data_end   ),
+-        .O_mc_app_rd_data_valid ( S_mc_app_rd_data_valid ),
+-        .O_mc_app_rdy           ( S_mc_app_rdy           ),
+-        .O_mc_app_wdf_rdy       ( S_mc_app_wdf_rdy       ),
+-
+-        .ddr_addr               ( ddr_addr               ),
+-        .ddr_ba                 ( ddr_ba                 ),
+-        .ddr_cke                ( ddr_cke                ),
+-        .ddr_odt                ( ddr_odt                ),
+-        .ddr_cs_n               ( ddr_cs_n               ),
+-        .ddr_ras_n              ( ddr_ras_n              ),
+-        .ddr_cas_n              ( ddr_cas_n              ),
+-        .ddr_we_n               ( ddr_we_n               ),
+-        .ddr_ck_p               ( ddr_ck_p               ),
+-        .ddr_ck_n               ( ddr_ck_n               ),
+-        .ddr_dm                 ( ddr_dm                 ),
+-        .ddr_dq                 ( ddr_dq                 ),
+-        .ddr_dqs_p              ( ddr_dqs_p              ),
+-        .ddr_dqs_n              ( ddr_dqs_n              )
+-    );
+-
+-
+-
+-    video_source #(
+-        .HTOTAL ( 1344  ),
+-        .HSA    ( 24    ),
+-        .HBP    ( 136   ),
+-        .HFP    ( 160   ),
+- 
+-        .VTOTAL ( 635 ),
+-        .VSA    ( 2    ),
+-        .VBP    ( 21   ),
+-        .VFP    ( 12   )
+-    )u_video_source(
+-        .I_clk          ( S_dsi_tx_clk     ),
+-        .I_rst          ( ~S_dsi_ready_n   ),
+-
+-        .I_config_done  ( S_dsi_ready_n   ),
+-
+-        .O_rgb24b_vsync ( S_vs_vsync       ),
+-        .O_rgb24b_hsync ( S_vs_hsync       ),
+-        .O_rgb24b_de    ( S_vs_de          ),
+-        .O_rgb24b_data  ( S_vs_data        )
+-    );
+-
+-
+-    generate if (DISPLAY_TEST_PATTERN != 0) begin : TEST_PATTERN
+-        // PDATA/PDEN are aligned by the vendor video_tpg pipeline.
+-        assign S_crop_rd_en = 1'b0;
+-        assign S_mixer_vsync = S_vs_vsync;
+-        assign S_mixer_hsync = S_vs_hsync;
+-        assign S_mixer_de = S_vs_de;
+-        assign S_mixer_data = S_vs_data;
+-    end else begin : CAMERA_IMAGE
+-    mixer u_mixer(
+-        .I_clk           ( S_dsi_tx_clk    ),
+-
+-        .I_video_vsync   ( S_vs_vsync      ),
+-        .I_video_hsync   ( S_vs_hsync      ),
+-        .I_video_de      ( S_vs_de         ),
+-
+-        .O_vdieo_rd_en   ( S_crop_rd_en   ),
+-        .I_video_rd_data ( S_video_rd_data ),
+-
+-        .O_mixer_vsync   ( S_mixer_vsync   ),
+-        .O_mixer_hsync   ( S_mixer_hsync   ),
+-        .O_mixer_de      ( S_mixer_de      ),
+-        .O_mixer_data    ( S_mixer_data    )
+-    );
+-    end endgenerate
+-
+-
+-
+-
+-    rgb_24b_to_32b #(
+-       .H_ACTIVE (1024)
+-    )u_rgb_24b_to_32b(
+-        .I_clk   ( S_dsi_tx_clk      ),
+-        .I_rst   ( ~S_dsi_ready_n    ),
+-
+-        .I_vsync ( S_mixer_vsync     ),
+-        .I_hsync ( S_mixer_hsync     ),
+-        .I_de    ( S_mixer_de        ),
+-        .I_data  ( S_mixer_data      ),
+-                                               
+-        .O_vsync ( S_32b_vsync       ),
+-        .O_hsync ( S_32b_hsync       ),
+-        .O_de    ( S_32b_de          ),
+-        .O_data  ( S_32b_data        )
+-    );
+-
+-
+-    dsi_video_mode_packet #(
+-       .H_ACTIVE (1024)
+-    ) u_dsi_video_mode_packet(
+-        .I_clk     ( S_dsi_tx_clk  ),
+-        .I_rst     ( ~S_dsi_ready_n ),
+-    
+-        .I_vsync   ( S_32b_vsync   ),
+-        .I_hsync   ( S_32b_hsync   ),
+-        .I_de      ( S_32b_de      ),
+-        .I_data    ( S_32b_data    ),
+-            
+-        .O_hs_en   ( S_hs_tx_valid ),
+-        .O_hs_data ( S_hs_tx_data  ),
+-        .O_hs_last ( S_hs_tx_last  )
+-    );
+-
+-
+-
+-    display_config_wrapper u_display_config_wrapper(
+-        .I_clk          ( S_10m_clk         ),
+-        .I_rst          ( ~S_lp_reset_n     ),
+-
+-        .I_config_start ( S_lp_config_start ),
+-        .O_config_done  ( S_lp_config_done  ),
+-
+-        .O_lp_tx_p      ( S_lp_tx_p         ),
+-        .O_lp_tx_n      ( S_lp_tx_n         )
+-    );
+-
+-
+-    mipi_dphy_tx_over_ph1p_mipiio_wrapper#(
+-        .DPHY_TX_LOCATION        ( "DPHY1"    ),
+-        .BYTE_NUM                ( 1          ),
+-        .LANE_NUM                ( 4          ),
+-
+-        .CLK_LANE_MODE           ( "CONTINUE" ),
+-        .HS_OUTPUT_VOD           ( "200mV"    ),//"175mV","187.5mV","200mV","212.5mV","225mV","237.5mV","250mV","450mV"
+-        .HS_OUTPUT_IMPEDANCE     ( "50ohm"    ),//"70ohm","64ohm","58ohm","54ohm","50ohm","47ohm","44ohm","41ohm"
+-        .HS_OUTPUT_DE_EMPHASIS   ( "0dB"      ),//"0dB","1dB","2dB","3dB","4dB","5dB","6dB"
+-
+-        .CK_OUTPUT_DELAY         ( 0  ),
+-        .L0_OUTPUT_DELAY         ( 0  ),
+-        .L1_OUTPUT_DELAY         ( 0  ),
+-        .L2_OUTPUT_DELAY         ( 0  ),
+-        .L3_OUTPUT_DELAY         ( 0  ),
+-
+-        .DPLL_MULTI_RATIO        ( 15 ), // encoded M=15, N=1: byte clock equals 52.173913 MHz ref
+-        .DPLL_DIV_RATIO          ( 1  ),
+-
+-        .T_DATA_LPX              ( 10 ),
+-        .T_DATA_HS_PREPARE       ( 10 ),
+-        .T_DATA_HS_ZERO          ( 20 ),
+-        .T_DATA_HS_TRAIL         ( 10 ),
+-        .T_CLK_LPX               ( 10 ),
+-        .T_CLK_PREPARE           ( 10 ),
+-        .T_CLK_ZERO              ( 10 ),
+-        .T_CLK_PRE               ( 10 ),
+-        .T_CLK_POST              ( 10 ),
+-        .T_CLK_TRAIL             ( 10 )
+-    )u_mipi_dphy_tx_over_ph1p_mipiio_wrapper(
+-        .I_dphy_pll_ref_clk ( S_dpll_ref_clk        ),
+-        .I_rst              ( ~S_rst_n              ),
+-        .O_dpll_locked      ( S_mipi_tx_dpll_locked ),
+-
+-        .O_hs_tx_clk        ( S_dsi_tx_clk          ),
+-        .I_hs_tx_valid      ( S_hs_tx_valid         ),
+-        .I_hs_tx_data       ( S_hs_tx_data          ),
+-        .I_hs_tx_last       ( S_hs_tx_last          ),
+-        .O_hs_tx_ready      ( S_hs_tx_ready         ),
+-
+-        .I_lp_tx_p          ( S_lp_tx_p             ),
+-        .I_lp_tx_n          ( S_lp_tx_n             ),
+-   
+-        .I_lp_rx_en         ( 1'b0                  ),
+-        .O_lp_rx_p          (                       ),
+-        .O_lp_rx_n          (                       ),
+-    
+-        .IO_tx_clk_pad_n    ( IO_tx_clk_pad_n       ),
+-        .IO_tx_clk_pad_p    ( IO_tx_clk_pad_p       ),
+-        .IO_tx_data_pad_n   ( IO_tx_data_pad_n      ),
+-        .IO_tx_data_pad_p   ( IO_tx_data_pad_p      )
+-    );
+-
+-
+-    
+-
+-endmodule
++
++
++module design_top_wrapper #(
++    parameter DISPLAY_TEST_PATTERN = 0, // 0: camera; 1: vendor generated test pattern
++    parameter OSD_ENABLE = 1,
++    parameter OSD_LOGO_X = 0,
++    parameter OSD_LOGO_Y = 0,
++    parameter OSD_TEXT_X = 375,
++    parameter OSD_TEXT_Y = 120,
++    parameter [23:0] OSD_TEXT_COLOR = 24'hfff200
++) (
++    input wire        I_sys_clk,
++    input wire        I_rst_n,
++      
++    output wire       O_cam_scl,
++    inout  wire       IO_cam_sda,
++    output wire       O_cam_24m,
++    output wire       O_cam_rst,
++      
++    inout wire [1:0]  I_button,
++
++    output wire       O_screen_pwm,
++    output wire       O_screen_reset_n,
++
++    inout wire        IO_tx_clk_pad_n,
++    inout wire        IO_tx_clk_pad_p,
++    inout wire[3:0]   IO_tx_data_pad_n,
++    inout wire[3:0]   IO_tx_data_pad_p,
++
++    inout wire        IO_rx_clk_pad_n, 
++    inout wire        IO_rx_clk_pad_p, 
++    inout wire[3:0]   IO_rx_data_pad_n,
++    inout wire[3:0]   IO_rx_data_pad_p,
++
++    output wire[12:0] ddr_addr,
++    output wire[ 1:0] ddr_ba,
++    output wire[ 0:0] ddr_cke,
++    output wire[ 0:0] ddr_odt,
++    output wire[ 0:0] ddr_cs_n,
++    output wire       ddr_ras_n,
++    output wire       ddr_cas_n,
++    output wire       ddr_we_n,
++    output wire[ 0:0] ddr_ck_p,
++    output wire[ 0:0] ddr_ck_n,
++    inout wire[1:0]   ddr_dm,
++    inout wire[15:0]  ddr_dq,
++    inout wire[1:0]   ddr_dqs_p,
++    inout wire[1:0]   ddr_dqs_n   
++);
++
++
++    wire        	S_100m_clk;
++    wire        	S_24m_clk;
++    wire        	S_dpll_ref_clk;
++	wire        	S_10m_clk;
++		
++	wire        	S_pll_lock;
++    wire        	S_rst_n;
++	
++	wire [15:0] 	S_ae;
++    wire [15:0] 	S_ag;
++    wire 			S_cam_cfg_done;
++    wire 			S_ae_cfg_done;
++    wire 			S_ae_req; 
++	
++	wire        	S_csi_rx_clk;  
++    wire        	S_hs_rx_valid;  
++    wire[15:0]  	S_hs_rx_data;   
++	wire[1:0]   	S_lane_error;
++	
++	wire        	S_csi_frame_start;       
++	wire        	S_csi_frame_end;         
++	wire        	S_csi_valid;             
++	wire[31:0]  	S_csi_data;  
++		
++	wire        	S_raw10_frame_start; 
++	wire        	S_raw10_frame_end;   
++	wire        	S_raw10_valid;       
++	wire [39:0] 	S_raw10_data;
++		
++	wire 			S_axis_tlast;  
++	wire 			S_axis_tuser;  
++	wire [39:0]		S_axis_tdata;  
++	wire 			S_axis_tvalid; 
++	
++	wire [39:0]		S_raw_tdata ;
++	wire			S_raw_tlast ;
++	wire 			S_raw_tvalid;
++	wire 			S_raw_tuser ;
++	
++	wire			S_ISP_O_tready;
++	wire [127:0]	S_ISP_O_tdata ;
++	wire 			S_ISP_O_tlast ;
++	wire 			S_ISP_O_tuser ;
++	wire 			S_ISP_O_tvalid; 
++	
++
++    wire        S_ddr_clk;
++    wire        S_dsi_tx_clk;
++    wire        S_display_rst_n;
++    wire        S_video_out_rst_n;
++
++
++    wire        S_vi_128b_frame_start;
++    wire        S_vi_128b_valid;      
++    wire[127:0] S_vi_128b_data;    
++    
++    wire        S_video_out_rd_busy;
++    wire        S_video_in_wr_busy; 
++    wire[1:0]   S_video_out_rp;     
++
++    wire        S_ddr_user_wr_en;       
++    wire        S_ddr_user_rd_en;       
++    wire[24:0]  S_ddr_user_addr;        
++    wire[127:0] S_ddr_user_wr_data;     
++    wire        S_ddr_user_ready;       
++    wire        S_ddr_user_rd_valid;    
++    wire[127:0] S_ddr_user_rd_data;     
++
++    wire        S_vi_ddr_wr_en;   
++    wire[24:0]  S_vi_ddr_wr_addr; 
++    wire[127:0] S_vi_ddr_wr_data;
++    wire        S_vi_ddr_wr_ready;
++
++    wire        S_vo_ddr_rd_en;   
++    wire[24:0]  S_vo_ddr_rd_addr; 
++    wire        S_vo_ddr_rd_ready;
++    wire        S_vo_dbg_fifo_rst;
++    wire        S_vo_dbg_ddr_rd_valid;
++    wire        S_vo_dbg_fifo_rd_en;
++    wire        S_vo_dbg_fifo_empty;
++
++    wire        S_init_calib_complete; 
++    wire[24:0]  S_mc_app_addr;          
++    wire[2:0]   S_mc_app_cmd;           
++    wire        S_mc_app_en;            
++    wire[127:0] S_mc_app_wdf_data;      
++    wire        S_mc_app_wdf_end;       
++    wire[15:0]  S_mc_app_wdf_mask;      
++    wire        S_mc_app_wdf_wren;      
++    wire[127:0] S_mc_app_rd_data;       
++    wire        S_mc_app_rd_data_end;   
++    wire        S_mc_app_rd_data_valid; 
++    wire        S_mc_app_rdy;           
++    wire        S_mc_app_wdf_rdy;       
++    wire        S_mc_dbg_fifo_afull;
++    wire        S_mc_dbg_app_rdy;
++    wire        S_mc_dbg_wdf_rdy;
++    wire        S_mc_dbg_cmd_pop;
++
++    wire        S_vs_vsync;
++    wire        S_vs_hsync;
++    wire        S_vs_de;
++    wire        S_hdmi_user;
++    wire        S_hdmi_last;
++    wire        S_video_out_vsync;
++    wire        S_crop_rd_en;
++    wire        S_hdmi_out_vsync;
++    wire        S_hdmi_out_hsync;
++    wire        S_hdmi_out_de;
++    wire[23:0]  S_hdmi_out_data;
++
++    wire[23:0]  S_video_rd_data;
++    reg         S_dbg_raw_seen;
++    reg         S_dbg_isp_seen;
++    reg         S_dbg_ddr_wr_seen;
++    reg         S_dbg_ddr_rd_seen;
++    reg         S_dbg_cam_cfg_seen;
++    reg         S_dbg_hs_seen;
++    reg         S_dbg_csi_seen;
++    reg         S_dbg_raw10_seen;
++    reg         S_dbg_isp_fs_seen;
++    reg         S_dbg_isp_valid_seen;
++    reg         S_dbg_ddr_req_seen;
++    reg         S_dbg_ddr_ready_seen;
++    reg [1:0]   S_dbg_raw_seen_sync;
++    reg [1:0]   S_dbg_isp_seen_sync;
++    reg [1:0]   S_dbg_ddr_wr_seen_sync;
++    reg [1:0]   S_dbg_ddr_rd_seen_sync;
++    reg [1:0]   S_dbg_cam_cfg_seen_sync;
++    reg [1:0]   S_dbg_hs_seen_sync;
++    reg [1:0]   S_dbg_csi_seen_sync;
++    reg [1:0]   S_dbg_raw10_seen_sync;
++    reg [1:0]   S_dbg_isp_fs_seen_sync;
++    reg [1:0]   S_dbg_isp_valid_seen_sync;
++    reg [1:0]   S_dbg_ddr_req_seen_sync;
++    reg [1:0]   S_dbg_ddr_ready_seen_sync;
++    reg         S_dbg_video_nonzero_seen;
++    reg         S_dbg_rd_req_seen;
++    reg         S_dbg_rd_valid_seen;
++    reg         S_dbg_rd_nonzero_seen;
++    reg [1:0]   S_dbg_rd_req_seen_sync;
++    reg [1:0]   S_dbg_rd_valid_seen_sync;
++    reg [1:0]   S_dbg_rd_nonzero_seen_sync;
++    reg         S_dbg_mc_init_seen;
++    reg         S_dbg_mc_app_rdy_seen;
++    reg         S_dbg_mc_wdf_rdy_seen;
++    reg         S_dbg_mc_cmd_pop_seen;
++    reg [1:0]   S_dbg_mc_init_seen_sync;
++    reg [1:0]   S_dbg_mc_app_rdy_seen_sync;
++    reg [1:0]   S_dbg_mc_wdf_rdy_seen_sync;
++    reg [1:0]   S_dbg_mc_cmd_pop_seen_sync;
++    // 720p input-format diagnostics.  One RAW10 line from the factory
++    // 1280-pixel mode contains 1600 bytes, i.e. 400 valid 32-bit CSI words.
++    reg         S_dbg_hs_valid_d;
++    reg [10:0]  S_dbg_csi_words;
++    reg [10:0]  S_dbg_good_lines;
++    reg         S_dbg_frame_seen_once;
++    reg         S_dbg_frame_repeat_seen;
++    reg         S_dbg_width_1280_seen;
++    reg         S_dbg_height_720_seen;
++    reg         S_dbg_isp_frame_seen_once;
++    reg         S_dbg_isp_frame_repeat_seen;
++    reg [1:0]   S_dbg_frame_repeat_sync;
++    reg [1:0]   S_dbg_width_1280_sync;
++    reg [1:0]   S_dbg_height_720_sync;
++    reg [1:0]   S_dbg_isp_frame_repeat_sync;
++    wire[3:0]   S_vs_debug_status;
++    wire        S_lane_error_any;
++
++
++
++    wire S_lp_config_done;
++    wire S_mipi_tx_dpll_locked;
++    wire S_lp_tx_p, S_lp_tx_n;
++    wire S_32b_vsync, S_32b_hsync, S_32b_de;
++    wire [31:0] S_32b_data;
++    wire S_hs_tx_valid, S_hs_tx_last, S_hs_tx_ready;
++    wire [31:0] S_hs_tx_data;
++    wire S_base_vsync, S_base_hsync, S_base_de;
++    wire [23:0] S_base_data;
++    wire S_mixer_vsync, S_mixer_hsync, S_mixer_de;
++    wire [23:0] S_mixer_data;
++    wire [23:0] S_vs_data;
++    reg [31:0] S_delay_cnt;
++    wire S_lp_config_start;
++
++    // Vendor reference uses an always-powered 3.3 V panel, released reset,
++    // continuous backlight enable, and a 10 ms settling time at 10 MHz.
++    // No panel-specific reset pulse duration is supplied; do not invent one.
++    // FFC pin 33 is TP-RES on this screen assembly; it is NOT LCD RESX.
++    assign O_screen_reset_n = 1'b1;
++    always @(posedge S_10m_clk or negedge S_lp_reset_n) begin
++        if (!S_lp_reset_n) S_delay_cnt <= 32'd0;
++        else if (S_delay_cnt < 32'd10000000) S_delay_cnt <= S_delay_cnt + 1'b1;
++    end
++    assign S_lp_config_start = (S_delay_cnt >= 32'd100000);
++
++    // Blank backlight until initialization and ten-frame settling complete.
++    // At ~61 Hz, 200 ms exceeds the ten-VSYNC interval in JD9165BA Fig.5.1.
++    reg [1:0] S_init_done_lp;
++    reg [21:0] S_backlight_delay;
++    always @(posedge S_10m_clk or negedge S_lp_reset_n) begin
++        if (!S_lp_reset_n) begin
++            S_init_done_lp <= 0;
++            S_backlight_delay <= 0;
++        end else begin
++            S_init_done_lp <= {S_init_done_lp[0], S_lp_config_done};
++            if (!S_init_done_lp[1]) S_backlight_delay <= 0;
++            else if (S_backlight_delay < 22'd2000000)
++                S_backlight_delay <= S_backlight_delay + 1'b1;
++        end
++    end
++    assign O_screen_pwm = (S_backlight_delay == 22'd2000000);
++    assign S_video_out_vsync = S_vs_vsync; // vendor DSI VS is active high
++	
++	
++    assign S_rst_n 		= S_pll_lock;
++    wire S_display_async_n = S_rst_n & S_mipi_tx_dpll_locked & S_lp_config_done;
++    wire S_lp_async_n = S_rst_n & S_mipi_tx_dpll_locked;
++    wire S_lp_reset_n, S_dsi_ready_n;
++    display_reset_sync u_read_reset (.I_clk(S_ddr_clk), .I_async_reset_n(S_display_async_n), .O_reset_n(S_display_rst_n));
++    display_reset_sync u_dsi_reset (.I_clk(S_dsi_tx_clk), .I_async_reset_n(S_display_async_n), .O_reset_n(S_dsi_ready_n));
++    display_reset_sync u_lp_reset (.I_clk(S_10m_clk), .I_async_reset_n(S_lp_async_n), .O_reset_n(S_lp_reset_n));
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_raw_seen <= 1'b0;
++        else if(S_raw10_frame_start | S_axis_tvalid)
++            S_dbg_raw_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_isp_seen <= 1'b0;
++        else if(S_ISP_O_tuser | S_ISP_O_tvalid)
++            S_dbg_isp_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_ddr_wr_seen <= 1'b0;
++        else if(S_vi_ddr_wr_en)
++            S_dbg_ddr_wr_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_ddr_rd_seen <= 1'b0;
++        else if(S_ddr_user_rd_valid)
++            S_dbg_ddr_rd_seen <= 1'b1;
++    end
++
++    always @(posedge S_24m_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_cam_cfg_seen <= 1'b0;
++        else if(S_cam_cfg_done)
++            S_dbg_cam_cfg_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_hs_seen <= 1'b0;
++        else if(S_hs_rx_valid)
++            S_dbg_hs_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_csi_seen <= 1'b0;
++        else if(S_csi_frame_start | S_csi_valid)
++            S_dbg_csi_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_raw10_seen <= 1'b0;
++        else if(S_raw10_frame_start | S_raw10_valid)
++            S_dbg_raw10_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_isp_fs_seen <= 1'b0;
++        else if(S_ISP_O_tuser)
++            S_dbg_isp_fs_seen <= 1'b1;
++    end
++
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_isp_valid_seen <= 1'b0;
++        else if(S_ISP_O_tvalid)
++            S_dbg_isp_valid_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_ddr_req_seen <= 1'b0;
++        else if(S_vi_ddr_wr_en)
++            S_dbg_ddr_req_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_ddr_ready_seen <= 1'b0;
++        else if(S_ddr_user_ready)
++            S_dbg_ddr_ready_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
++        if(!S_video_out_rst_n)
++            S_dbg_rd_req_seen <= 1'b0;
++        else if(S_vo_ddr_rd_en)
++            S_dbg_rd_req_seen <= 1'b1;
++    end
++
++    // Count CSI payload words between HS packet boundaries.  This avoids
++    // probing an internal net of csi_unpacket_2lane (which ChipWatcher cannot
++    // legally connect to) and verifies the received line length externally.
++    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
++        if(!S_rst_n) begin
++            S_dbg_hs_valid_d          <= 1'b0;
++            S_dbg_csi_words           <= 11'd0;
++            S_dbg_good_lines          <= 11'd0;
++            S_dbg_frame_seen_once     <= 1'b0;
++            S_dbg_frame_repeat_seen   <= 1'b0;
++            S_dbg_width_1280_seen     <= 1'b0;
++            S_dbg_height_720_seen     <= 1'b0;
++            S_dbg_isp_frame_seen_once <= 1'b0;
++            S_dbg_isp_frame_repeat_seen <= 1'b0;
++        end
++        else begin
++            S_dbg_hs_valid_d <= S_hs_rx_valid;
++
++            if(!S_dbg_hs_valid_d && S_hs_rx_valid)
++                S_dbg_csi_words <= 11'd0;
++            else if(S_csi_valid)
++                S_dbg_csi_words <= S_dbg_csi_words + 11'd1;
++
++            // A packet with CSI payload is an image line.  Ignore short
++            // frame-start/frame-end packets, whose payload count is zero.
++            if(S_dbg_hs_valid_d && !S_hs_rx_valid && (S_dbg_csi_words != 0)) begin
++                if(S_dbg_csi_words == 11'd400) begin
++                    S_dbg_width_1280_seen <= 1'b1;
++                    S_dbg_good_lines <= S_dbg_good_lines + 11'd1;
++                end
++            end
++
++            if(S_csi_frame_start) begin
++                if(S_dbg_frame_seen_once) begin
++                    S_dbg_frame_repeat_seen <= 1'b1;
++                    if(S_dbg_good_lines == 11'd720)
++                        S_dbg_height_720_seen <= 1'b1;
++                end
++                else
++                    S_dbg_frame_seen_once <= 1'b1;
++                S_dbg_good_lines <= 11'd0;
++            end
++
++            if(S_ISP_O_tuser) begin
++                if(S_dbg_isp_frame_seen_once)
++                    S_dbg_isp_frame_repeat_seen <= 1'b1;
++                else
++                    S_dbg_isp_frame_seen_once <= 1'b1;
++            end
++        end
++    end
++
++    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
++        if(!S_video_out_rst_n)
++            S_dbg_rd_valid_seen <= 1'b0;
++        else if(S_ddr_user_rd_valid)
++            S_dbg_rd_valid_seen <= 1'b1;
++    end
++
++    always @(posedge S_dsi_tx_clk or negedge S_video_out_rst_n) begin
++        if(!S_video_out_rst_n)
++            S_dbg_rd_nonzero_seen <= 1'b0;
++        else if(S_crop_rd_en && (S_video_rd_data != 24'd0))
++            S_dbg_rd_nonzero_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_mc_init_seen <= 1'b0;
++        else if(S_init_calib_complete)
++            S_dbg_mc_init_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_mc_app_rdy_seen <= 1'b0;
++        else if(S_mc_dbg_app_rdy)
++            S_dbg_mc_app_rdy_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_mc_wdf_rdy_seen <= 1'b0;
++        else if(S_mc_dbg_wdf_rdy)
++            S_dbg_mc_wdf_rdy_seen <= 1'b1;
++    end
++
++    always @(posedge S_ddr_clk or negedge S_rst_n) begin
++        if(!S_rst_n)
++            S_dbg_mc_cmd_pop_seen <= 1'b0;
++        else if(S_mc_dbg_cmd_pop)
++            S_dbg_mc_cmd_pop_seen <= 1'b1;
++    end
++
++    always @(posedge S_dsi_tx_clk or negedge S_display_rst_n) begin
++        if(!S_display_rst_n) begin
++            S_dbg_cam_cfg_seen_sync <= 2'b00;
++            S_dbg_hs_seen_sync      <= 2'b00;
++            S_dbg_csi_seen_sync     <= 2'b00;
++            S_dbg_raw10_seen_sync   <= 2'b00;
++            S_dbg_raw_seen_sync    <= 2'b00;
++            S_dbg_isp_seen_sync    <= 2'b00;
++            S_dbg_ddr_wr_seen_sync <= 2'b00;
++            S_dbg_ddr_rd_seen_sync <= 2'b00;
++            S_dbg_isp_fs_seen_sync  <= 2'b00;
++            S_dbg_isp_valid_seen_sync <= 2'b00;
++            S_dbg_ddr_req_seen_sync <= 2'b00;
++            S_dbg_ddr_ready_seen_sync <= 2'b00;
++            S_dbg_video_nonzero_seen <= 1'b0;
++            S_dbg_rd_req_seen_sync <= 2'b00;
++            S_dbg_rd_valid_seen_sync <= 2'b00;
++            S_dbg_rd_nonzero_seen_sync <= 2'b00;
++            S_dbg_mc_init_seen_sync <= 2'b00;
++            S_dbg_mc_app_rdy_seen_sync <= 2'b00;
++            S_dbg_mc_wdf_rdy_seen_sync <= 2'b00;
++            S_dbg_mc_cmd_pop_seen_sync <= 2'b00;
++            S_dbg_frame_repeat_sync <= 2'b00;
++            S_dbg_width_1280_sync <= 2'b00;
++            S_dbg_height_720_sync <= 2'b00;
++            S_dbg_isp_frame_repeat_sync <= 2'b00;
++        end
++        else begin
++            S_dbg_cam_cfg_seen_sync <= {S_dbg_cam_cfg_seen_sync[0], S_dbg_cam_cfg_seen};
++            S_dbg_hs_seen_sync      <= {S_dbg_hs_seen_sync[0],      S_dbg_hs_seen};
++            S_dbg_csi_seen_sync     <= {S_dbg_csi_seen_sync[0],     S_dbg_csi_seen};
++            S_dbg_raw10_seen_sync   <= {S_dbg_raw10_seen_sync[0],   S_dbg_raw10_seen};
++            S_dbg_raw_seen_sync    <= {S_dbg_raw_seen_sync[0],    S_dbg_raw_seen};
++            S_dbg_isp_seen_sync    <= {S_dbg_isp_seen_sync[0],    S_dbg_isp_seen};
++            S_dbg_ddr_wr_seen_sync <= {S_dbg_ddr_wr_seen_sync[0], S_dbg_ddr_wr_seen};
++            S_dbg_ddr_rd_seen_sync <= {S_dbg_ddr_rd_seen_sync[0], S_dbg_ddr_rd_seen};
++            S_dbg_isp_fs_seen_sync  <= {S_dbg_isp_fs_seen_sync[0],  S_dbg_isp_fs_seen};
++            S_dbg_isp_valid_seen_sync <= {S_dbg_isp_valid_seen_sync[0], S_dbg_isp_valid_seen};
++            S_dbg_ddr_req_seen_sync <= {S_dbg_ddr_req_seen_sync[0], S_dbg_ddr_req_seen};
++            S_dbg_ddr_ready_seen_sync <= {S_dbg_ddr_ready_seen_sync[0], S_dbg_ddr_ready_seen};
++            S_dbg_rd_req_seen_sync <= {S_dbg_rd_req_seen_sync[0], S_dbg_rd_req_seen};
++            S_dbg_rd_valid_seen_sync <= {S_dbg_rd_valid_seen_sync[0], S_dbg_rd_valid_seen};
++            S_dbg_rd_nonzero_seen_sync <= {S_dbg_rd_nonzero_seen_sync[0], S_dbg_rd_nonzero_seen};
++            S_dbg_mc_init_seen_sync <= {S_dbg_mc_init_seen_sync[0], S_dbg_mc_init_seen};
++            S_dbg_mc_app_rdy_seen_sync <= {S_dbg_mc_app_rdy_seen_sync[0], S_dbg_mc_app_rdy_seen};
++            S_dbg_mc_wdf_rdy_seen_sync <= {S_dbg_mc_wdf_rdy_seen_sync[0], S_dbg_mc_wdf_rdy_seen};
++            S_dbg_mc_cmd_pop_seen_sync <= {S_dbg_mc_cmd_pop_seen_sync[0], S_dbg_mc_cmd_pop_seen};
++            S_dbg_frame_repeat_sync <= {S_dbg_frame_repeat_sync[0], S_dbg_frame_repeat_seen};
++            S_dbg_width_1280_sync <= {S_dbg_width_1280_sync[0], S_dbg_width_1280_seen};
++            S_dbg_height_720_sync <= {S_dbg_height_720_sync[0], S_dbg_height_720_seen};
++            S_dbg_isp_frame_repeat_sync <= {S_dbg_isp_frame_repeat_sync[0], S_dbg_isp_frame_repeat_seen};
++            if(S_crop_rd_en && (S_video_rd_data != 24'd0))
++                S_dbg_video_nonzero_seen <= 1'b1;
++        end
++    end
++
++    assign S_lane_error_any = |S_lane_error;
++
++    assign S_vo_dbg_fifo_rst = 1'b0;
++    assign S_vo_dbg_ddr_rd_valid = 1'b0;
++    assign S_vo_dbg_fifo_rd_en = 1'b0;
++    assign S_vo_dbg_fifo_empty = 1'b0;
++    assign S_mc_dbg_fifo_afull = 1'b0;
++    assign S_mc_dbg_app_rdy = 1'b0;
++    assign S_mc_dbg_wdf_rdy = 1'b0;
++    assign S_mc_dbg_cmd_pop = 1'b0;
++
++    // On-screen bring-up status, from left to right in DEBUG_MODE=3:
++    // I2C configuration completed, MIPI HS activity seen, repeated CSI frames,
++    // and a 1280-pixel RAW10 line (400 x 32-bit CSI payload words) seen.
++    assign S_vs_debug_status = {
++        S_dbg_width_1280_sync[1],
++        S_dbg_frame_repeat_sync[1],
++        S_dbg_hs_seen_sync[1],
++        S_dbg_cam_cfg_seen_sync[1]
++    };
++	
++	assign O_cam_rst 	= 1'b1;
++    assign O_cam_24m 	= S_24m_clk;
++	
++	
++	
++	
++    PLL u_PLL(
++        .refclk      ( I_sys_clk         ),
++        .reset    	 ( ~I_rst_n          ),
++        
++        .clk0_out    ( S_100m_clk        ),
++        .clk1_out    ( S_24m_clk         ),
++
++        .clk2_out    ( S_dpll_ref_clk ),
++        .clk3_out    ( S_10m_clk ),
++
++        .lock        ( S_pll_lock        )
++
++    );
++
++
++	
++
++  
++  ae_set u_ae_set (
++      .I_clk(S_24m_clk),
++      .I_rst(~S_rst_n),
++      .I_btn({I_button,2'b11}),
++      .I_cam_cfg_done(S_cam_cfg_done),
++      .I_ae_cfg_done(S_ae_cfg_done),
++      .O_ae_req(S_ae_req),
++      .O_ae(S_ae),
++      .O_ag(S_ag)
++  );
++  
++    uicfgcs500_720p #(
++      .CLK_DIV(24000000 / 100000 - 1)
++  ) u_uicfgcs500 (
++      .I_clk(S_24m_clk),  //系统时钟输入
++      .I_rst_n(S_rst_n),  //系统复位输入
++      .I_ae_req(S_ae_req),
++      .I_ae(S_ae),
++      .I_ag(S_ag),
++      .O_cam_scl(O_cam_scl),  //I2C总线，SCL时钟
++      .IO_cam_sda(IO_cam_sda),  //I2C总线，SDA数据
++      .O_cfg_done(S_cam_cfg_done),  //摄像头寄存器初始化完成
++      .O_ae_cfg_done(S_ae_cfg_done)  //AE配置完成
++  );
++	
++    mipi_dphy_rx_ph1p_mipiio_wrapper#(
++        .DPHY_RX_LOCATION      ( "DPHY0" ),
++        .HS_EQUALIZER          ( "0dB"   ),//"0dB","1.5dB","3dB","4.5dB","6dB","7.5dB","9dB","10.5dB"
++        .HS_VGA_GAIN           ( "8dB" ),//"-3dB","-1.5dB","0dB","1.5dB","3dB","4.5dB","6dB","7.5dB"
++        .LANE_NUM              ( 2       ),
++        .BYTE_NUM              ( 1       )
++    )u_mipi_dphy_rx_ph1p_mipiio_wrapper(
++        .I_lp_clk              ( S_100m_clk       ),
++        .I_rst                 ( ~S_rst_n         ),
++
++        .I_clk_lane_in_delay   ( 6'd0             ),
++        .I_data_lane0_in_delay ( 6'd0             ),
++        .I_data_lane1_in_delay ( 6'd0             ),
++        .I_data_lane2_in_delay ( 6'd0             ),
++        .I_data_lane3_in_delay ( 6'd0             ),
++
++        .I_lane_invert         ( 4'b0000          ),
++     
++        .O_hs_rx_clk           ( S_csi_rx_clk     ),
++        .O_hs_rx_valid         ( S_hs_rx_valid    ),
++        .O_hs_rx_data          ( S_hs_rx_data     ),
++      
++        .O_lp_rx_lane0_p       (  ),
++        .O_lp_rx_lane0_n       (  ),
++      
++        .I_lp_tx_en            ( 1'b0             ),
++        .I_lp_tx_lane0_p       ( 1'b1             ),
++        .I_lp_tx_lane0_n       ( 1'b1             ),
++      
++        .O_lane_match_error    (                  ),
++        .O_lane_error          ( S_lane_error     ),
++      
++        .IO_rx_clk_pad_n       ( IO_rx_clk_pad_n  ),
++        .IO_rx_clk_pad_p       ( IO_rx_clk_pad_p  ),
++        .IO_rx_data_pad_n      ( IO_rx_data_pad_n ),
++        .IO_rx_data_pad_p      ( IO_rx_data_pad_p )
++    );
++	
++	
++ //  cwc cwc_inst
++ //(
++ //    .probe0(S_hs_rx_valid),
++ //    .probe1(S_hs_rx_data),
++ //    .probe2(S_lane_error),
++ //    .clk(S_csi_rx_clk)
++ //);
++
++ //csi 解码为RAW数据
++csi_unpacket_2lane u_csi_unpacket(
++.I_clk                 ( S_csi_rx_clk       ),
++.I_rst_n               ( S_rst_n        	),
++.I_hs_valid            ( S_hs_rx_valid     ),
++.I_hs_data             ( S_hs_rx_data      ),
++
++.O_csi_frame_start     ( S_csi_frame_start ),
++.O_csi_frame_end       ( S_csi_frame_end   ),
++.O_csi_valid           ( S_csi_valid       ),
++.O_csi_data            ( S_csi_data        )
++);
++
++
++//解码为RAW8
++raw10_unpacket_2lane u_raw10_unpacket (
++.I_clk  (S_csi_rx_clk),
++.I_rst_n(S_rst_n),
++
++.I_csi_frame_start(S_csi_frame_start),
++.I_csi_frame_end  (S_csi_frame_end),
++.I_csi_valid      (S_csi_valid),
++.I_csi_data       (S_csi_data),
++
++.O_raw10_frame_start(S_raw10_frame_start),
++.O_raw10_frame_end  (S_raw10_frame_end),
++.O_raw10_valid      (S_raw10_valid),
++.O_raw10_data       (S_raw10_data)
++  );
++
++
++//将数据转为stream流
++uial2axis #(
++.IMG_WIDTH(1280),
++.IMG_HEIGHT(720),
++.INPUT_DATA_WIDTH(40)
++) 
++u_uial2axis (
++.I_native_clk(S_csi_rx_clk),
++.I_rst_n     (S_rst_n),
++.I_data      (S_raw10_data       ),
++.I_data_valid(S_raw10_valid      ),
++.I_data_start(S_raw10_frame_start),
++.I_data_end  (S_raw10_frame_end  ),
++.axis_tvalid (S_axis_tvalid),
++.axis_tdata  (S_axis_tdata ),
++.axis_tuser  (S_axis_tuser ),
++.axis_tlast  (S_axis_tlast )
++);
++	
++
++// SC500 factory HD mode already outputs native 1280x720 RAW10.
++assign S_raw_tdata  = S_axis_tdata;
++assign S_raw_tvalid = S_axis_tvalid;
++assign S_raw_tlast  = S_axis_tlast;
++assign S_raw_tuser  = S_axis_tuser;
++
++
++//cwc1 cwc1_Inst
++//  (
++//      .probe0(S_axis_tuser),
++//      .probe1(S_axis_tvalid),
++//      .probe2(S_axis_tlast),
++//      .probe3(S_axis_tdata),
++//      .probe4(S_ISP_O_tuser),
++//      .probe5(S_ISP_O_tvalid),
++//      .probe6(S_ISP_O_tlast),
++//      .probe7(S_ISP_O_tdata),
++//      .probe8 (S_raw_tdata ),
++//      .probe9 (S_raw_tlast ),
++//      .probe10(S_raw_tvalid),
++//      .probe11(S_raw_tuser ),
++//      .clk(S_csi_rx_clk)
++//  );
++
++
++//ISP算法顶层模块
++isp_top u_isp_top (
++.axi4s_video_aclk(S_csi_rx_clk),
++.I_rst_n         (S_rst_n),
++.I_tlast         (S_raw_tlast	),
++.I_tuser         (S_raw_tuser	),
++.I_tdata         (S_raw_tdata	),
++.I_tvalid        (S_raw_tvalid	),
++.I_tdest         (),
++.O_tready        (S_ISP_O_tready),
++.O_tdata         (S_ISP_O_tdata ),
++.O_tlast         (S_ISP_O_tlast ),
++.O_tuser         (S_ISP_O_tuser ),
++.O_tvalid        (S_ISP_O_tvalid),
++.I_tready        ()
++  );
++
++
++    video_in u_video_in(
++        .I_rst_n              (  S_rst_n             ),
++
++        .I_camera_clk         ( S_csi_rx_clk          ),
++        .I_camera_frame_start ( S_ISP_O_tuser  ),
++        .I_camera_valid       ( S_ISP_O_tvalid ),
++        .I_camera_data        ( S_ISP_O_tdata  ),
++        .I_mipi_rx_error      ( 1'b0			      ),
++
++        .I_ddr_clk            ( S_ddr_clk             ),
++		.I_display_pause      ( 1'b0                  ),
++        .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
++        .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
++        .O_video_out_rp       ( S_video_out_rp        ),
++
++        .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
++        .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
++        .O_ddr_user_wr_data   ( S_vi_ddr_wr_data      ),
++        .I_ddr_user_ready     ( S_ddr_user_ready      )
++    );
++
++
++
++    assign S_ddr_user_wr_en    = S_vi_ddr_wr_en;
++
++    assign S_ddr_user_rd_en    = S_vo_ddr_rd_en;
++
++    assign S_ddr_user_addr     = S_vi_ddr_wr_en ? S_vi_ddr_wr_addr :
++                                 S_vo_ddr_rd_en ? S_vo_ddr_rd_addr : 'd0;
++
++    assign S_ddr_user_wr_data  = S_vi_ddr_wr_data;
++
++
++    assign S_video_out_rst_n = S_display_rst_n;
++
++    video_out u_video_out(
++        .I_rst_n             ( S_video_out_rst_n    ),
++        .I_ddr_clk           ( S_ddr_clk            ),
++ 
++        .O_video_out_rd_busy ( S_video_out_rd_busy  ),
++        .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
++        .I_video_out_rp      ( S_video_out_rp       ),
++ 
++        .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
++        .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
++        .I_ddr_user_ready    ( S_ddr_user_ready     ),
++        .I_ddr_user_rd_valid ( S_ddr_user_rd_valid  ),
++        .I_ddr_user_rd_data  ( S_ddr_user_rd_data   ),
++
++        .I_dsi_clk           ( S_dsi_tx_clk     ),
++        .I_video_vsync       ( S_video_out_vsync    ),
++        .I_video_rd_en       ( S_crop_rd_en  ),
++        .O_vdieo_data        ( S_video_rd_data      )
++    );
++
++
++
++    mc_to_user_interface u_mc_to_user_interface(
++        .I_clk                   ( S_ddr_clk               ),
++        .I_rst_n                 ( S_rst_n                 ),
++
++        .I_ddr_user_wr_en        ( S_ddr_user_wr_en        ),
++        .I_ddr_user_rd_en        ( S_ddr_user_rd_en        ),
++        .I_ddr_user_addr         ( S_ddr_user_addr         ),
++        .I_ddr_user_wr_data      ( S_ddr_user_wr_data      ),
++        .O_ddr_user_ready        ( S_ddr_user_ready        ),
++        .O_ddr_user_rd_valid     ( S_ddr_user_rd_valid     ),
++        .O_ddr_user_rd_data      ( S_ddr_user_rd_data      ),
++            
++        .O_mc_app_en             ( S_mc_app_en             ),
++        .O_mc_app_addr           ( S_mc_app_addr           ),
++        .O_mc_app_cmd            ( S_mc_app_cmd            ),
++        .I_mc_app_rdy            ( S_mc_app_rdy            ),
++        .O_mc_app_wdf_wren       ( S_mc_app_wdf_wren       ),
++        .O_mc_app_wdf_data       ( S_mc_app_wdf_data       ),
++        .O_mc_app_wdf_end        ( S_mc_app_wdf_end        ),
++        .O_mc_app_wdf_mask       ( S_mc_app_wdf_mask       ),
++        .I_mc_app_wdf_rdy        ( S_mc_app_wdf_rdy        ),
++        .I_mc_app_rd_data        ( S_mc_app_rd_data        ),
++        .I_mc_app_rd_data_end    ( S_mc_app_rd_data_end    ),
++        .I_mc_app_rd_data_valid  ( S_mc_app_rd_data_valid  )
++    );
++
++
++
++    ph1p35_324_ddr_wrapper u_ph1p35_324_ddr_wrapper(
++        .I_sys_clk              ( S_100m_clk             ),
++        .I_sys_rst_n            ( S_rst_n                ),
++
++        .O_ddr_clk              ( S_ddr_clk              ),
++        .O_init_calib_complete  ( S_init_calib_complete  ),
++        .I_mc_app_addr          ( S_mc_app_addr          ),
++        .I_mc_app_cmd           ( S_mc_app_cmd           ),
++        .I_mc_app_en            ( S_mc_app_en            ),
++        .I_mc_app_wdf_data      ( S_mc_app_wdf_data      ),
++        .I_mc_app_wdf_end       ( S_mc_app_wdf_end       ),
++        .I_mc_app_wdf_mask      ( S_mc_app_wdf_mask      ),
++        .I_mc_app_wdf_wren      ( S_mc_app_wdf_wren      ),
++        .O_mc_app_rd_data       ( S_mc_app_rd_data       ),
++        .O_mc_app_rd_data_end   ( S_mc_app_rd_data_end   ),
++        .O_mc_app_rd_data_valid ( S_mc_app_rd_data_valid ),
++        .O_mc_app_rdy           ( S_mc_app_rdy           ),
++        .O_mc_app_wdf_rdy       ( S_mc_app_wdf_rdy       ),
++
++        .ddr_addr               ( ddr_addr               ),
++        .ddr_ba                 ( ddr_ba                 ),
++        .ddr_cke                ( ddr_cke                ),
++        .ddr_odt                ( ddr_odt                ),
++        .ddr_cs_n               ( ddr_cs_n               ),
++        .ddr_ras_n              ( ddr_ras_n              ),
++        .ddr_cas_n              ( ddr_cas_n              ),
++        .ddr_we_n               ( ddr_we_n               ),
++        .ddr_ck_p               ( ddr_ck_p               ),
++        .ddr_ck_n               ( ddr_ck_n               ),
++        .ddr_dm                 ( ddr_dm                 ),
++        .ddr_dq                 ( ddr_dq                 ),
++        .ddr_dqs_p              ( ddr_dqs_p              ),
++        .ddr_dqs_n              ( ddr_dqs_n              )
++    );
++
++
++
++    video_source #(
++        .HTOTAL ( 1344  ),
++        .HSA    ( 24    ),
++        .HBP    ( 136   ),
++        .HFP    ( 160   ),
++ 
++        .VTOTAL ( 635 ),
++        .VSA    ( 2    ),
++        .VBP    ( 21   ),
++        .VFP    ( 12   )
++    )u_video_source(
++        .I_clk          ( S_dsi_tx_clk     ),
++        .I_rst          ( ~S_dsi_ready_n   ),
++
++        .I_config_done  ( S_dsi_ready_n   ),
++
++        .O_rgb24b_vsync ( S_vs_vsync       ),
++        .O_rgb24b_hsync ( S_vs_hsync       ),
++        .O_rgb24b_de    ( S_vs_de          ),
++        .O_rgb24b_data  ( S_vs_data        )
++    );
++
++
++    generate if (DISPLAY_TEST_PATTERN != 0) begin : TEST_PATTERN
++        // PDATA/PDEN are aligned by the vendor video_tpg pipeline.
++        assign S_crop_rd_en = 1'b0;
++        assign S_base_vsync = S_vs_vsync;
++        assign S_base_hsync = S_vs_hsync;
++        assign S_base_de = S_vs_de;
++        assign S_base_data = S_vs_data;
++    end else begin : CAMERA_IMAGE
++    mixer u_mixer(
++        .I_clk           ( S_dsi_tx_clk    ),
++
++        .I_video_vsync   ( S_vs_vsync      ),
++        .I_video_hsync   ( S_vs_hsync      ),
++        .I_video_de      ( S_vs_de         ),
++
++        .O_vdieo_rd_en   ( S_crop_rd_en   ),
++        .I_video_rd_data ( S_video_rd_data ),
++
++        .O_mixer_vsync   ( S_base_vsync   ),
++        .O_mixer_hsync   ( S_base_hsync   ),
++        .O_mixer_de      ( S_base_de      ),
++        .O_mixer_data    ( S_base_data    )
++    );
++    end endgenerate
++
++    dsi_osd_overlay #(
++        .OSD_ENABLE(OSD_ENABLE),
++        .LOGO_X(OSD_LOGO_X), .LOGO_Y(OSD_LOGO_Y),
++        .TEXT_X(OSD_TEXT_X), .TEXT_Y(OSD_TEXT_Y),
++        .TEXT_COLOR(OSD_TEXT_COLOR)
++    ) u_dsi_osd_overlay (
++        .I_clk(S_dsi_tx_clk), .I_rst_n(S_dsi_ready_n),
++        .I_vsync(S_base_vsync), .I_hsync(S_base_hsync),
++        .I_de(S_base_de), .I_data(S_base_data),
++        .O_vsync(S_mixer_vsync), .O_hsync(S_mixer_hsync),
++        .O_de(S_mixer_de), .O_data(S_mixer_data)
++    );
++
++
++
++
++
++    rgb_24b_to_32b #(
++       .H_ACTIVE (1024)
++    )u_rgb_24b_to_32b(
++        .I_clk   ( S_dsi_tx_clk      ),
++        .I_rst   ( ~S_dsi_ready_n    ),
++
++        .I_vsync ( S_mixer_vsync     ),
++        .I_hsync ( S_mixer_hsync     ),
++        .I_de    ( S_mixer_de        ),
++        .I_data  ( S_mixer_data      ),
++                                               
++        .O_vsync ( S_32b_vsync       ),
++        .O_hsync ( S_32b_hsync       ),
++        .O_de    ( S_32b_de          ),
++        .O_data  ( S_32b_data        )
++    );
++
++
++    dsi_video_mode_packet #(
++       .H_ACTIVE (1024)
++    ) u_dsi_video_mode_packet(
++        .I_clk     ( S_dsi_tx_clk  ),
++        .I_rst     ( ~S_dsi_ready_n ),
++    
++        .I_vsync   ( S_32b_vsync   ),
++        .I_hsync   ( S_32b_hsync   ),
++        .I_de      ( S_32b_de      ),
++        .I_data    ( S_32b_data    ),
++            
++        .O_hs_en   ( S_hs_tx_valid ),
++        .O_hs_data ( S_hs_tx_data  ),
++        .O_hs_last ( S_hs_tx_last  )
++    );
++
++
++
++    display_config_wrapper u_display_config_wrapper(
++        .I_clk          ( S_10m_clk         ),
++        .I_rst          ( ~S_lp_reset_n     ),
++
++        .I_config_start ( S_lp_config_start ),
++        .O_config_done  ( S_lp_config_done  ),
++
++        .O_lp_tx_p      ( S_lp_tx_p         ),
++        .O_lp_tx_n      ( S_lp_tx_n         )
++    );
++
++
++    mipi_dphy_tx_over_ph1p_mipiio_wrapper#(
++        .DPHY_TX_LOCATION        ( "DPHY1"    ),
++        .BYTE_NUM                ( 1          ),
++        .LANE_NUM                ( 4          ),
++
++        .CLK_LANE_MODE           ( "CONTINUE" ),
++        .HS_OUTPUT_VOD           ( "200mV"    ),//"175mV","187.5mV","200mV","212.5mV","225mV","237.5mV","250mV","450mV"
++        .HS_OUTPUT_IMPEDANCE     ( "50ohm"    ),//"70ohm","64ohm","58ohm","54ohm","50ohm","47ohm","44ohm","41ohm"
++        .HS_OUTPUT_DE_EMPHASIS   ( "0dB"      ),//"0dB","1dB","2dB","3dB","4dB","5dB","6dB"
++
++        .CK_OUTPUT_DELAY         ( 0  ),
++        .L0_OUTPUT_DELAY         ( 0  ),
++        .L1_OUTPUT_DELAY         ( 0  ),
++        .L2_OUTPUT_DELAY         ( 0  ),
++        .L3_OUTPUT_DELAY         ( 0  ),
++
++        .DPLL_MULTI_RATIO        ( 15 ), // encoded M=15, N=1: byte clock equals 52.173913 MHz ref
++        .DPLL_DIV_RATIO          ( 1  ),
++
++        .T_DATA_LPX              ( 10 ),
++        .T_DATA_HS_PREPARE       ( 10 ),
++        .T_DATA_HS_ZERO          ( 20 ),
++        .T_DATA_HS_TRAIL         ( 10 ),
++        .T_CLK_LPX               ( 10 ),
++        .T_CLK_PREPARE           ( 10 ),
++        .T_CLK_ZERO              ( 10 ),
++        .T_CLK_PRE               ( 10 ),
++        .T_CLK_POST              ( 10 ),
++        .T_CLK_TRAIL             ( 10 )
++    )u_mipi_dphy_tx_over_ph1p_mipiio_wrapper(
++        .I_dphy_pll_ref_clk ( S_dpll_ref_clk        ),
++        .I_rst              ( ~S_rst_n              ),
++        .O_dpll_locked      ( S_mipi_tx_dpll_locked ),
++
++        .O_hs_tx_clk        ( S_dsi_tx_clk          ),
++        .I_hs_tx_valid      ( S_hs_tx_valid         ),
++        .I_hs_tx_data       ( S_hs_tx_data          ),
++        .I_hs_tx_last       ( S_hs_tx_last          ),
++        .O_hs_tx_ready      ( S_hs_tx_ready         ),
++
++        .I_lp_tx_p          ( S_lp_tx_p             ),
++        .I_lp_tx_n          ( S_lp_tx_n             ),
++   
++        .I_lp_rx_en         ( 1'b0                  ),
++        .O_lp_rx_p          (                       ),
++        .O_lp_rx_n          (                       ),
++    
++        .IO_tx_clk_pad_n    ( IO_tx_clk_pad_n       ),
++        .IO_tx_clk_pad_p    ( IO_tx_clk_pad_p       ),
++        .IO_tx_data_pad_n   ( IO_tx_data_pad_n      ),
++        .IO_tx_data_pad_p   ( IO_tx_data_pad_p      )
++    );
++
++
++    
++
++endmodule
+--- example1/td_project/lab_ex1_mipi_dsi_SC500_7inch_v2.al
++++ example3/td_project/lab_ex3_osd_dsi_SC500_7inch.al
+@@ -1,579 +1,591 @@
+-<?xml version='1.0' encoding='utf-8'?>
+-<Project Version="3" Minor="2" Path=".">
+-    <Project_Created_Time />
+-    <TD_Encoding>UTF-8</TD_Encoding>
+-    <TD_Version>6.2.168116</TD_Version>
+-    <Name>lab_ex1_mipi_dsi_SC500_7inch_v2</Name>
+-    <HardWare>
+-        <Family>PH1</Family>
+-        <Device>PH1P35MDG324</Device>
+-        <Speed>-3</Speed>
+-    </HardWare>
+-    <Source_Files>
+-        <Verilog>
+-            <File Path="../user_source/hdl_source/design_top_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="1" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/video_in.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="5" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/video_out.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="7" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mc_to_user_interface.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="8" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/signal_delay.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="15" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/awb.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="18" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/ph1p35_ddr/ph1p35_324_ddr_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="20" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/csi_unpacket_2lane.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="21" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/isp_top.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="22" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/raw10_unpacket_2lane.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="23" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/uial2axis.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="24" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/bilinear_interpolation.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="25" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="26" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/line_buffer_demosaic.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="27" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/mipi_to_raw_converter.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="28" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/raw_matrix_3x3_buffer.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="29" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/zhenghe.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="30" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/data128_96/data128_96.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="31" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/data96_128/data96_128.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="34" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/SC500GainTbl.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="35" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/uicfgcs500_720p.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="36" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/uics500regAE.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="37" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/uii2c.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="38" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uiisp_beta/ae_set.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="39" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/lane_lvds_10_1.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="43" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/I2S_receiver.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="46" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/audio_arc_calculate.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="47" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/key_remove_shakes.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="48" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/uics500reg_720p60.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="49" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/uics500_cfg/uics500reg_1080p30.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true" />
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="50" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/video_source.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="100" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/video_tpg.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="101" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mixer.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="102" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/crc16_8b.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="103" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/display_config_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="104" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/dsi_video_mode_packet.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="105" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/ecc_gen.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="106" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/instruction_execution.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="107" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/instruction_fetch.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="108" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/lp_tx_wrapper.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="109" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/dsi_tx_packet/rgb_24b_to_32b.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="110" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_tx/hs_tx_wrapper_merge.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="111" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_tx/mipi_dphy_tx_over_ph1p_mipiio_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="112" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_tx/ph1p_mipiio_tx_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="113" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/display_reset_sync.v"><FileInfo>
+-                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
+-                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="123"/>
+-            </FileInfo></File>
+-        </Verilog>
+-        <System_Verilog>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/mipi_dphy_rx_ph1p_mipiio_wrapper.sv">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="3" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/ph1p_mipiio_rx_wrapper.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="4" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/byte_aligner.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="10" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/byte_aligner_wrapper.enc.sv">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="11" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/channel_aligner.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="12" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/channel_aligner_wrapper.enc.sv">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="13" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/mipi_dphy_rx/hs_detect.enc.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="14" />
+-                </FileInfo>
+-            </File>
+-        </System_Verilog>
+-        <ADC_FILE>
+-            <File Path="../user_source/constraints_source/pin.adc">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="constraint_1" />
+-                    <Attr Name="CompileOrder" Val="1" />
+-                </FileInfo>
+-            </File>
+-        </ADC_FILE>
+-        <SDC_FILE>
+-            <File Path="lab_ex1_mipi_dsi_SC500_7inch_v2.sdc">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="constraint_1" />
+-                    <Attr Name="CompileOrder" Val="2" />
+-                </FileInfo>
+-            </File>
+-        </SDC_FILE>
+-        <IP_FILE>
+-            <File Path="../user_source/ip_source/PLL/PLL.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="2" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="6" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/w155_d512_fifo/w155_d512_fifo.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="9" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/blk_mem_gen_awb_delay_signal/blk_mem_gen_awb_delay_signal.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="16" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/divider/divider.ipc">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="17" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/ph1p35_ddr/ddr2/ddr2.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="19" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_zhenghe/blk_mem_gen_zhenghe.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="32" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/blk_mem_gen_demosaic.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="33" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/w8_d1024_rom/w8_d1024_rom.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="120" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/w8_d1024_fifo/w8_d1024_fifo.xml">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true" />
+-                    <Attr Name="UsedInP&R" Val="true" />
+-                    <Attr Name="BelongTo" Val="design_1" />
+-                    <Attr Name="CompileOrder" Val="121" />
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/ip_source/w32_d512_fifo/w32_d512_fifo.xml"><FileInfo>
+-                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
+-                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="122"/>
+-            </FileInfo></File>
+-        </IP_FILE>
+-    </Source_Files>
+-    <FileSets>
+-        <FileSet Name="design_1" Type="DesignFiles">
+-        </FileSet>
+-        <FileSet Name="constraint_1" Type="ConstrainFiles">
+-        </FileSet>
+-    </FileSets>
+-    <TOP_MODULE>
+-        <LABEL>design_top_wrapper</LABEL>
+-        <MODULE>design_top_wrapper</MODULE>
+-        <CREATEINDEX>user</CREATEINDEX>
+-    </TOP_MODULE>
+-    <Property>
+-    </Property>
+-    <Device_Settings>
+-    </Device_Settings>
+-    <Configurations>
+-        <Control0>
+-            <mclk_freq>33MHz</mclk_freq>
+-        </Control0>
+-        <FeatureRow>
+-            <boot_mode>mspix4</boot_mode>
+-        </FeatureRow>
+-    </Configurations>
+-    <Runs>
+-        <Run Name="syn_1" Type="Synthesis" ConstraintSet="constraint_1" Description="" Active="true">
+-            <Strategy Name="Default_Synthesis_Strategy">
+-            </Strategy>
+-            <UserParams>
+-            </UserParams>
+-        </Run>
+-        <Run Name="phy_1" Type="PhysicalDesign" ConstraintSet="constraint_1" Description="" SynRun="syn_1" Active="true">
+-            <Strategy Name="Default_PhysicalDesign_Strategy">
+-                <BitgenProperty::GeneralOption>
+-                    <compress>on</compress>
+-                </BitgenProperty::GeneralOption>
+-            </Strategy>
+-            <UserParams>
+-            </UserParams>
+-        </Run>
+-    </Runs>
+-    <Project_Settings>
+-    </Project_Settings>
++<?xml version='1.0' encoding='utf-8'?>
++<Project Version="3" Minor="2" Path=".">
++    <Project_Created_Time />
++    <TD_Encoding>UTF-8</TD_Encoding>
++    <TD_Version>6.2.168116</TD_Version>
++    <Name>lab_ex3_osd_dsi_SC500_7inch</Name>
++    <HardWare>
++        <Family>PH1</Family>
++        <Device>PH1P35MDG324</Device>
++        <Speed>-3</Speed>
++    </HardWare>
++    <Source_Files>
++        <Verilog>
++            <File Path="../user_source/hdl_source/design_top_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="1" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/video_in.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="5" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/video_out.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="7" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mc_to_user_interface.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="8" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/signal_delay.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="15" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/awb.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="18" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/ph1p35_ddr/ph1p35_324_ddr_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="20" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/csi_unpacket_2lane.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="21" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/isp_top.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="22" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/raw10_unpacket_2lane.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="23" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/uial2axis.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="24" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/bilinear_interpolation.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="25" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="26" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/line_buffer_demosaic.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="27" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/mipi_to_raw_converter.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="28" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/raw_matrix_3x3_buffer.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="29" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/zhenghe.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="30" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/data128_96/data128_96.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="31" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/data96_128/data96_128.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="34" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/SC500GainTbl.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="35" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/uicfgcs500_720p.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="36" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/uics500regAE.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="37" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/uii2c.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="38" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uiisp_beta/ae_set.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="39" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/lane_lvds_10_1.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="43" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/I2S_receiver.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="46" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/audio_arc_calculate.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="47" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/key_remove_shakes.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="48" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/uics500reg_720p60.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="49" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/uics500_cfg/uics500reg_1080p30.v">
++                <FileInfo>
++                    <Attr Name="AutoExcluded" Val="true" />
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="50" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/video_source.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="100" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/video_tpg.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="101" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mixer.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="102" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/crc16_8b.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="103" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/display_config_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="104" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/dsi_video_mode_packet.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="105" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/ecc_gen.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="106" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/instruction_execution.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="107" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/instruction_fetch.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="108" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/lp_tx_wrapper.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="109" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/dsi_tx_packet/rgb_24b_to_32b.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="110" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_tx/hs_tx_wrapper_merge.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="111" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_tx/mipi_dphy_tx_over_ph1p_mipiio_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="112" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_tx/ph1p_mipiio_tx_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="113" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/display_reset_sync.v"><FileInfo>
++                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
++                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="123"/>
++            </FileInfo></File>
++            <File Path="../user_source/hdl_source/osd/dsi_osd_overlay.v"><FileInfo>
++                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
++                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="130"/>
++            </FileInfo></File>
++            <File Path="../user_source/hdl_source/osd/osd_logo_rom.v"><FileInfo>
++                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
++                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="131"/>
++            </FileInfo></File>
++            <File Path="../user_source/hdl_source/osd/osd_char_lib.v"><FileInfo>
++                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
++                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="132"/>
++            </FileInfo></File>
++        </Verilog>
++        <System_Verilog>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/mipi_dphy_rx_ph1p_mipiio_wrapper.sv">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="3" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/ph1p_mipiio_rx_wrapper.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="4" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/byte_aligner.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="10" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/byte_aligner_wrapper.enc.sv">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="11" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/channel_aligner.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="12" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/channel_aligner_wrapper.enc.sv">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="13" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/mipi_dphy_rx/hs_detect.enc.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="14" />
++                </FileInfo>
++            </File>
++        </System_Verilog>
++        <ADC_FILE>
++            <File Path="../user_source/constraints_source/pin.adc">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="constraint_1" />
++                    <Attr Name="CompileOrder" Val="1" />
++                </FileInfo>
++            </File>
++        </ADC_FILE>
++        <SDC_FILE>
++            <File Path="lab_ex3_osd_dsi_SC500_7inch.sdc">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="constraint_1" />
++                    <Attr Name="CompileOrder" Val="2" />
++                </FileInfo>
++            </File>
++        </SDC_FILE>
++        <IP_FILE>
++            <File Path="../user_source/ip_source/PLL/PLL.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="2" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="6" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/w155_d512_fifo/w155_d512_fifo.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="9" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/blk_mem_gen_awb_delay_signal/blk_mem_gen_awb_delay_signal.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="16" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/divider/divider.ipc">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="17" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/ph1p35_ddr/ddr2/ddr2.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="19" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_zhenghe/blk_mem_gen_zhenghe.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="32" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/blk_mem_gen_demosaic.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="33" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/w8_d1024_rom/w8_d1024_rom.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="120" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/w8_d1024_fifo/w8_d1024_fifo.xml">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true" />
++                    <Attr Name="UsedInP&R" Val="true" />
++                    <Attr Name="BelongTo" Val="design_1" />
++                    <Attr Name="CompileOrder" Val="121" />
++                </FileInfo>
++            </File>
++            <File Path="../user_source/ip_source/w32_d512_fifo/w32_d512_fifo.xml"><FileInfo>
++                <Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&R" Val="true"/>
++                <Attr Name="BelongTo" Val="design_1"/><Attr Name="CompileOrder" Val="122"/>
++            </FileInfo></File>
++        </IP_FILE>
++    </Source_Files>
++    <FileSets>
++        <FileSet Name="design_1" Type="DesignFiles">
++        </FileSet>
++        <FileSet Name="constraint_1" Type="ConstrainFiles">
++        </FileSet>
++    </FileSets>
++    <TOP_MODULE>
++        <LABEL>design_top_wrapper</LABEL>
++        <MODULE>design_top_wrapper</MODULE>
++        <CREATEINDEX>user</CREATEINDEX>
++    </TOP_MODULE>
++    <Property>
++    </Property>
++    <Device_Settings>
++    </Device_Settings>
++    <Configurations>
++        <Control0>
++            <mclk_freq>33MHz</mclk_freq>
++        </Control0>
++        <FeatureRow>
++            <boot_mode>mspix4</boot_mode>
++        </FeatureRow>
++    </Configurations>
++    <Runs>
++        <Run Name="syn_1" Type="Synthesis" ConstraintSet="constraint_1" Description="" Active="true">
++            <Strategy Name="Default_Synthesis_Strategy">
++            </Strategy>
++            <UserParams>
++            </UserParams>
++        </Run>
++        <Run Name="phy_1" Type="PhysicalDesign" ConstraintSet="constraint_1" Description="" SynRun="syn_1" Active="true">
++            <Strategy Name="Default_PhysicalDesign_Strategy">
++                <BitgenProperty::GeneralOption>
++                    <compress>on</compress>
++                </BitgenProperty::GeneralOption>
++            </Strategy>
++            <UserParams>
++            </UserParams>
++        </Run>
++    </Runs>
++    <Project_Settings>
++    </Project_Settings>
+ </Project>--- /dev/null
++++ example3/user_source/hdl_source/osd/dsi_osd_overlay.v
+@@ -0,0 +1,168 @@
++// RGB888 overlay for the already aligned example-1 display stream.
++// All syncs and RGB are delayed by the same two register stages.
++module dsi_osd_overlay #(
++    parameter OSD_ENABLE = 1,
++    parameter LOGO_X = 0,
++    parameter LOGO_Y = 0,
++    parameter TEXT_X = 375,
++    parameter TEXT_Y = 120,
++    parameter [23:0] TEXT_COLOR = 24'hfff200,
++    parameter LOGO_INIT_FILE = "../../../user_source/hdl_source/osd/anlogic_logo.hex"
++)(
++    input wire I_clk,
++    input wire I_rst_n,
++    input wire I_vsync, I_hsync, I_de,
++    input wire [23:0] I_data,
++    output reg O_vsync, O_hsync, O_de,
++    output reg [23:0] O_data
++);
++    reg vs_d, de_d;
++    reg [11:0] x, y;
++    reg [3:0] digit0, digit1, digit2, digit3, digit4, digit5;
++    wire frame_start = I_vsync && !vs_d;
++
++    // A level VSYNC lasts many clocks; only its rising edge counts a frame.
++    always @(posedge I_clk or negedge I_rst_n) begin
++        if (!I_rst_n) begin
++            vs_d <= 0; de_d <= 0; x <= 0; y <= 0;
++            digit0 <= 0; digit1 <= 0; digit2 <= 0;
++            digit3 <= 0; digit4 <= 0; digit5 <= 0;
++        end else begin
++            vs_d <= I_vsync;
++            de_d <= I_de;
++            if (frame_start) begin x <= 0; y <= 0; end
++            else begin
++                if (I_de) x <= x + 1'b1;
++                else x <= 0;
++                if (de_d && !I_de) y <= y + 1'b1;
++            end
++            if (frame_start) begin
++                if (digit0 != 9) digit0 <= digit0 + 1'b1;
++                else begin
++                    digit0 <= 0;
++                    if (digit1 != 9) digit1 <= digit1 + 1'b1;
++                    else begin
++                        digit1 <= 0;
++                        if (digit2 != 9) digit2 <= digit2 + 1'b1;
++                        else begin
++                            digit2 <= 0;
++                            if (digit3 != 9) digit3 <= digit3 + 1'b1;
++                            else begin
++                                digit3 <= 0;
++                                if (digit4 != 9) digit4 <= digit4 + 1'b1;
++                                else begin
++                                    digit4 <= 0;
++                                    if (digit5 != 9) digit5 <= digit5 + 1'b1;
++                                    else digit5 <= 0;
++                                end
++                            end
++                        end
++                    end
++                end
++            end
++        end
++    end
++
++    // floor(value*16/24), equivalent to the original example-3 scaling.
++    function [3:0] scale24;
++        input [4:0] value;
++        begin
++            case(value)
++                0,1: scale24=0; 2: scale24=1;
++                3,4: scale24=2; 5: scale24=3;
++                6,7: scale24=4; 8: scale24=5;
++                9,10: scale24=6; 11: scale24=7;
++                12,13: scale24=8; 14: scale24=9;
++                15,16: scale24=10; 17: scale24=11;
++                18,19: scale24=12; 20: scale24=13;
++                21,22: scale24=14; 23: scale24=15;
++                default: scale24=0;
++            endcase
++        end
++    endfunction
++
++    reg logo_region;
++    reg [14:0] logo_addr;
++    reg [11:0] lx, ly, tx, ty;
++    reg text_region;
++    reg [7:0] char_code;
++    reg [3:0] char_row, char_col;
++    reg [3:0] dec_digit;
++    reg [4:0] local_x, local_y;
++    wire [15:0] char_bits;
++    wire [24:0] logo_pixel;
++    osd_char_lib u_font(.I_char(char_code), .I_row(char_row), .O_row_bits(char_bits));
++    osd_logo_rom #(.INIT_FILE(LOGO_INIT_FILE)) u_logo(
++        .I_clk(I_clk), .I_addr(logo_addr), .O_pixel(logo_pixel));
++
++    // Address selection is separate from the ROM/font output mux to avoid
++    // combinational feedback through an external character-ROM module.
++    always @(*) begin
++        logo_region=0; logo_addr=0; lx=0; ly=0;
++        text_region=0; tx=0; ty=0;
++        char_code=0; char_row=0; char_col=0;
++        dec_digit=0; local_x=0; local_y=0;
++        if (OSD_ENABLE && I_de) begin
++            if (x>=LOGO_X && x<LOGO_X+160 && y>=LOGO_Y && y<LOGO_Y+160) begin
++                logo_region=1;
++                lx=x-LOGO_X; ly=y-LOGO_Y;
++                logo_addr=ly*15'd160+lx;
++            end
++            if (x>=TEXT_X && x<TEXT_X+200 && y>=TEXT_Y && y<TEXT_Y+24) begin
++                tx=x-TEXT_X; ty=y-TEXT_Y;
++                local_y=ty[4:0];
++                if (tx<48) begin
++                    char_code=(tx<24) ? 8'h80 : 8'h81; // 安 路
++                    local_x=(tx<24) ? tx : tx-24;
++                    if (ty>=2) begin
++                        local_y=ty-2;
++                        text_region=1;
++                        char_col=scale24(local_x);
++                        char_row=scale24(local_y);
++                    end
++                end else if (tx>=52 && tx<108 && ty>=4 && ty<20) begin
++                    text_region=1;
++                    if (tx<68) begin char_code="C"; local_x=tx-52; end
++                    else if (tx<84) begin char_code="N"; local_x=tx-68; end
++                    else if (tx<100) begin char_code="T"; local_x=tx-84; end
++                    else begin char_code=":"; local_x=(tx-100)*2; end
++                    char_col=local_x[3:0];
++                    local_y=ty-4;
++                    char_row=local_y[3:0];
++                end else if (tx>=110) begin
++                    text_region=1;
++                    if (tx<125) begin dec_digit=digit5; local_x=tx-110; end
++                    else if (tx<140) begin dec_digit=digit4; local_x=tx-125; end
++                    else if (tx<155) begin dec_digit=digit3; local_x=tx-140; end
++                    else if (tx<170) begin dec_digit=digit2; local_x=tx-155; end
++                    else if (tx<185) begin dec_digit=digit1; local_x=tx-170; end
++                    else begin dec_digit=digit0; local_x=tx-185; end
++                    char_code=8'h30+dec_digit;
++                    // floor(value*16/15)==value for value in 0..14.
++                    char_col=local_x[3:0];
++                    char_row=scale24(local_y);
++                end
++            end
++        end
++    end
++
++    reg s1_vs, s1_hs, s1_de;
++    reg [23:0] s1_rgb;
++    reg s1_logo, s1_text;
++    always @(posedge I_clk or negedge I_rst_n) begin
++        if (!I_rst_n) begin
++            s1_vs<=0; s1_hs<=0; s1_de<=0; s1_rgb<=0;
++            s1_logo<=0; s1_text<=0;
++            O_vsync<=0; O_hsync<=0; O_de<=0; O_data<=0;
++        end else begin
++            s1_vs<=I_vsync; s1_hs<=I_hsync; s1_de<=I_de; s1_rgb<=I_data;
++            s1_logo<=logo_region;
++            s1_text<=text_region && char_bits[15-char_col];
++            O_vsync<=s1_vs; O_hsync<=s1_hs; O_de<=s1_de;
++            if (!s1_de) O_data<=0;
++            else if (s1_logo && logo_pixel[24]) O_data<=logo_pixel[23:0];
++            else if (s1_text) O_data<=TEXT_COLOR;
++            else O_data<=s1_rgb;
++        end
++    end
++endmodule
+--- /dev/null
++++ example3/user_source/hdl_source/osd/osd_char_lib.v
+@@ -0,0 +1,873 @@
++module osd_char_lib (
++    input wire [7:0] I_char,
++    input wire [3:0] I_row,
++    output reg [15:0] O_row_bits
++);
++
++    localparam CHAR_AN    = 8'h80;
++    localparam CHAR_LU    = 8'h81;
++    localparam CHAR_A     = 8'h41;
++    localparam CHAR_B     = 8'h42;
++    localparam CHAR_C     = 8'h43;
++    localparam CHAR_D     = 8'h44;
++    localparam CHAR_E     = 8'h45;
++    localparam CHAR_F     = 8'h46;
++    localparam CHAR_G     = 8'h47;
++    localparam CHAR_H     = 8'h48;
++    localparam CHAR_I     = 8'h49;
++    localparam CHAR_J     = 8'h4a;
++    localparam CHAR_K     = 8'h4b;
++    localparam CHAR_L     = 8'h4c;
++    localparam CHAR_M     = 8'h4d;
++    localparam CHAR_N     = 8'h4e;
++    localparam CHAR_O     = 8'h4f;
++    localparam CHAR_P     = 8'h50;
++    localparam CHAR_Q     = 8'h51;
++    localparam CHAR_R     = 8'h52;
++    localparam CHAR_S     = 8'h53;
++    localparam CHAR_T     = 8'h54;
++    localparam CHAR_U     = 8'h55;
++    localparam CHAR_V     = 8'h56;
++    localparam CHAR_W     = 8'h57;
++    localparam CHAR_X     = 8'h58;
++    localparam CHAR_Y     = 8'h59;
++    localparam CHAR_Z     = 8'h5a;
++    localparam CHAR_0     = 8'h30;
++    localparam CHAR_1     = 8'h31;
++    localparam CHAR_2     = 8'h32;
++    localparam CHAR_3     = 8'h33;
++    localparam CHAR_4     = 8'h34;
++    localparam CHAR_5     = 8'h35;
++    localparam CHAR_6     = 8'h36;
++    localparam CHAR_7     = 8'h37;
++    localparam CHAR_8     = 8'h38;
++    localparam CHAR_9     = 8'h39;
++    localparam CHAR_COLON = 8'h3a;
++
++    always @(*) begin
++        case(I_char)
++            CHAR_AN: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0200;
++                    4'd1: O_row_bits = 16'h7ff0;
++                    4'd2: O_row_bits = 16'h4410;
++                    4'd3: O_row_bits = 16'h0400;
++                    4'd4: O_row_bits = 16'h7ff0;
++                    4'd5: O_row_bits = 16'h0840;
++                    4'd6: O_row_bits = 16'h1040;
++                    4'd7: O_row_bits = 16'h1c80;
++                    4'd8: O_row_bits = 16'h0300;
++                    4'd9: O_row_bits = 16'h0cc0;
++                    4'd10: O_row_bits = 16'h7020;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_LU: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h79e0;
++                    4'd1: O_row_bits = 16'h4a20;
++                    4'd2: O_row_bits = 16'h4d40;
++                    4'd3: O_row_bits = 16'h7880;
++                    4'd4: O_row_bits = 16'h1140;
++                    4'd5: O_row_bits = 16'h1630;
++                    4'd6: O_row_bits = 16'h5be0;
++                    4'd7: O_row_bits = 16'h5220;
++                    4'd8: O_row_bits = 16'h5220;
++                    4'd9: O_row_bits = 16'h5be0;
++                    4'd10: O_row_bits = 16'h6220;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_A: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1c00;
++                    4'd3: O_row_bits = 16'h1400;
++                    4'd4: O_row_bits = 16'h1400;
++                    4'd5: O_row_bits = 16'h1400;
++                    4'd6: O_row_bits = 16'h3600;
++                    4'd7: O_row_bits = 16'h3e00;
++                    4'd8: O_row_bits = 16'h2200;
++                    4'd9: O_row_bits = 16'h2200;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_B: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3e00;
++                    4'd6: O_row_bits = 16'h3300;
++                    4'd7: O_row_bits = 16'h3300;
++                    4'd8: O_row_bits = 16'h3300;
++                    4'd9: O_row_bits = 16'h3e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_C: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h03f0;
++                    4'd3: O_row_bits = 16'h0c0c;
++                    4'd4: O_row_bits = 16'h1800;
++                    4'd5: O_row_bits = 16'h3000;
++                    4'd6: O_row_bits = 16'h3000;
++                    4'd7: O_row_bits = 16'h3000;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3000;
++                    4'd10: O_row_bits = 16'h1800;
++                    4'd11: O_row_bits = 16'h0c0c;
++                    4'd12: O_row_bits = 16'h03f0;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_D: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3300;
++                    4'd6: O_row_bits = 16'h3300;
++                    4'd7: O_row_bits = 16'h3300;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3c00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_E: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3e00;
++                    4'd6: O_row_bits = 16'h3000;
++                    4'd7: O_row_bits = 16'h3000;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_F: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3000;
++                    4'd6: O_row_bits = 16'h3e00;
++                    4'd7: O_row_bits = 16'h3000;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3000;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_G: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1c00;
++                    4'd3: O_row_bits = 16'h3200;
++                    4'd4: O_row_bits = 16'h6000;
++                    4'd5: O_row_bits = 16'h6000;
++                    4'd6: O_row_bits = 16'h6e00;
++                    4'd7: O_row_bits = 16'h6600;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h1e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_H: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3300;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3f00;
++                    4'd6: O_row_bits = 16'h3300;
++                    4'd7: O_row_bits = 16'h3300;
++                    4'd8: O_row_bits = 16'h3300;
++                    4'd9: O_row_bits = 16'h3300;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_I: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1e00;
++                    4'd3: O_row_bits = 16'h0c00;
++                    4'd4: O_row_bits = 16'h0c00;
++                    4'd5: O_row_bits = 16'h0c00;
++                    4'd6: O_row_bits = 16'h0c00;
++                    4'd7: O_row_bits = 16'h0c00;
++                    4'd8: O_row_bits = 16'h0c00;
++                    4'd9: O_row_bits = 16'h1e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_J: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h0600;
++                    4'd4: O_row_bits = 16'h0600;
++                    4'd5: O_row_bits = 16'h0600;
++                    4'd6: O_row_bits = 16'h0600;
++                    4'd7: O_row_bits = 16'h0600;
++                    4'd8: O_row_bits = 16'h2600;
++                    4'd9: O_row_bits = 16'h1c00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_K: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3300;
++                    4'd3: O_row_bits = 16'h3600;
++                    4'd4: O_row_bits = 16'h3400;
++                    4'd5: O_row_bits = 16'h3c00;
++                    4'd6: O_row_bits = 16'h3c00;
++                    4'd7: O_row_bits = 16'h3400;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3300;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_L: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3000;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3000;
++                    4'd6: O_row_bits = 16'h3000;
++                    4'd7: O_row_bits = 16'h3000;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_M: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3600;
++                    4'd3: O_row_bits = 16'h3600;
++                    4'd4: O_row_bits = 16'h3600;
++                    4'd5: O_row_bits = 16'h3600;
++                    4'd6: O_row_bits = 16'h2a00;
++                    4'd7: O_row_bits = 16'h2a00;
++                    4'd8: O_row_bits = 16'h2200;
++                    4'd9: O_row_bits = 16'h2200;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_N: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h300c;
++                    4'd3: O_row_bits = 16'h380c;
++                    4'd4: O_row_bits = 16'h3c0c;
++                    4'd5: O_row_bits = 16'h360c;
++                    4'd6: O_row_bits = 16'h330c;
++                    4'd7: O_row_bits = 16'h318c;
++                    4'd8: O_row_bits = 16'h30cc;
++                    4'd9: O_row_bits = 16'h306c;
++                    4'd10: O_row_bits = 16'h303c;
++                    4'd11: O_row_bits = 16'h301c;
++                    4'd12: O_row_bits = 16'h300c;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_O: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1e00;
++                    4'd3: O_row_bits = 16'h3200;
++                    4'd4: O_row_bits = 16'h6300;
++                    4'd5: O_row_bits = 16'h6300;
++                    4'd6: O_row_bits = 16'h6300;
++                    4'd7: O_row_bits = 16'h6300;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3c00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_P: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3300;
++                    4'd6: O_row_bits = 16'h3e00;
++                    4'd7: O_row_bits = 16'h3000;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3000;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_Q: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1e00;
++                    4'd3: O_row_bits = 16'h3200;
++                    4'd4: O_row_bits = 16'h6300;
++                    4'd5: O_row_bits = 16'h6300;
++                    4'd6: O_row_bits = 16'h6300;
++                    4'd7: O_row_bits = 16'h6300;
++                    4'd8: O_row_bits = 16'h7600;
++                    4'd9: O_row_bits = 16'h3c00;
++                    4'd10: O_row_bits = 16'h0c00;
++                    4'd11: O_row_bits = 16'h0700;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_R: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3300;
++                    4'd6: O_row_bits = 16'h3c00;
++                    4'd7: O_row_bits = 16'h3600;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3200;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_S: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h1e00;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3c00;
++                    4'd6: O_row_bits = 16'h0f00;
++                    4'd7: O_row_bits = 16'h0300;
++                    4'd8: O_row_bits = 16'h0300;
++                    4'd9: O_row_bits = 16'h3e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_T: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3ffc;
++                    4'd3: O_row_bits = 16'h03c0;
++                    4'd4: O_row_bits = 16'h03c0;
++                    4'd5: O_row_bits = 16'h03c0;
++                    4'd6: O_row_bits = 16'h03c0;
++                    4'd7: O_row_bits = 16'h03c0;
++                    4'd8: O_row_bits = 16'h03c0;
++                    4'd9: O_row_bits = 16'h03c0;
++                    4'd10: O_row_bits = 16'h03c0;
++                    4'd11: O_row_bits = 16'h03c0;
++                    4'd12: O_row_bits = 16'h03c0;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_U: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3300;
++                    4'd3: O_row_bits = 16'h3300;
++                    4'd4: O_row_bits = 16'h3300;
++                    4'd5: O_row_bits = 16'h3300;
++                    4'd6: O_row_bits = 16'h3300;
++                    4'd7: O_row_bits = 16'h3300;
++                    4'd8: O_row_bits = 16'h3300;
++                    4'd9: O_row_bits = 16'h1e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_V: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h2200;
++                    4'd3: O_row_bits = 16'h2200;
++                    4'd4: O_row_bits = 16'h3600;
++                    4'd5: O_row_bits = 16'h3600;
++                    4'd6: O_row_bits = 16'h1400;
++                    4'd7: O_row_bits = 16'h1400;
++                    4'd8: O_row_bits = 16'h1c00;
++                    4'd9: O_row_bits = 16'h1c00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_W: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h2200;
++                    4'd3: O_row_bits = 16'h2200;
++                    4'd4: O_row_bits = 16'h2a00;
++                    4'd5: O_row_bits = 16'h2a00;
++                    4'd6: O_row_bits = 16'h3600;
++                    4'd7: O_row_bits = 16'h3600;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3600;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_X: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h1c00;
++                    4'd4: O_row_bits = 16'h1c00;
++                    4'd5: O_row_bits = 16'h0800;
++                    4'd6: O_row_bits = 16'h1c00;
++                    4'd7: O_row_bits = 16'h1400;
++                    4'd8: O_row_bits = 16'h3600;
++                    4'd9: O_row_bits = 16'h3200;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_Y: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3180;
++                    4'd3: O_row_bits = 16'h1300;
++                    4'd4: O_row_bits = 16'h1b00;
++                    4'd5: O_row_bits = 16'h1e00;
++                    4'd6: O_row_bits = 16'h0c00;
++                    4'd7: O_row_bits = 16'h0c00;
++                    4'd8: O_row_bits = 16'h0c00;
++                    4'd9: O_row_bits = 16'h0c00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_Z: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h3e00;
++                    4'd3: O_row_bits = 16'h0400;
++                    4'd4: O_row_bits = 16'h0c00;
++                    4'd5: O_row_bits = 16'h0800;
++                    4'd6: O_row_bits = 16'h0800;
++                    4'd7: O_row_bits = 16'h1800;
++                    4'd8: O_row_bits = 16'h1000;
++                    4'd9: O_row_bits = 16'h3e00;
++                    4'd10: O_row_bits = 16'h0000;
++                    4'd11: O_row_bits = 16'h0000;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_0: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h300c;
++                    4'd4: O_row_bits = 16'h300c;
++                    4'd5: O_row_bits = 16'h300c;
++                    4'd6: O_row_bits = 16'h0000;
++                    4'd7: O_row_bits = 16'h0000;
++                    4'd8: O_row_bits = 16'h300c;
++                    4'd9: O_row_bits = 16'h300c;
++                    4'd10: O_row_bits = 16'h300c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_1: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h000c;
++                    4'd2: O_row_bits = 16'h000c;
++                    4'd3: O_row_bits = 16'h000c;
++                    4'd4: O_row_bits = 16'h000c;
++                    4'd5: O_row_bits = 16'h000c;
++                    4'd6: O_row_bits = 16'h0000;
++                    4'd7: O_row_bits = 16'h0000;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h000c;
++                    4'd12: O_row_bits = 16'h000c;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_2: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h000c;
++                    4'd4: O_row_bits = 16'h000c;
++                    4'd5: O_row_bits = 16'h000c;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h3000;
++                    4'd9: O_row_bits = 16'h3000;
++                    4'd10: O_row_bits = 16'h3000;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_3: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h000c;
++                    4'd4: O_row_bits = 16'h000c;
++                    4'd5: O_row_bits = 16'h000c;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_4: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h300c;
++                    4'd2: O_row_bits = 16'h300c;
++                    4'd3: O_row_bits = 16'h300c;
++                    4'd4: O_row_bits = 16'h300c;
++                    4'd5: O_row_bits = 16'h300c;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h000c;
++                    4'd12: O_row_bits = 16'h000c;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_5: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3000;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_6: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h3000;
++                    4'd4: O_row_bits = 16'h3000;
++                    4'd5: O_row_bits = 16'h3000;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h300c;
++                    4'd9: O_row_bits = 16'h300c;
++                    4'd10: O_row_bits = 16'h300c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_7: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h000c;
++                    4'd4: O_row_bits = 16'h000c;
++                    4'd5: O_row_bits = 16'h000c;
++                    4'd6: O_row_bits = 16'h0000;
++                    4'd7: O_row_bits = 16'h0000;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h000c;
++                    4'd12: O_row_bits = 16'h000c;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_8: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h300c;
++                    4'd4: O_row_bits = 16'h300c;
++                    4'd5: O_row_bits = 16'h300c;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h300c;
++                    4'd9: O_row_bits = 16'h300c;
++                    4'd10: O_row_bits = 16'h300c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_9: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h1ff8;
++                    4'd2: O_row_bits = 16'h1ff8;
++                    4'd3: O_row_bits = 16'h300c;
++                    4'd4: O_row_bits = 16'h300c;
++                    4'd5: O_row_bits = 16'h300c;
++                    4'd6: O_row_bits = 16'h1ff8;
++                    4'd7: O_row_bits = 16'h1ff8;
++                    4'd8: O_row_bits = 16'h000c;
++                    4'd9: O_row_bits = 16'h000c;
++                    4'd10: O_row_bits = 16'h000c;
++                    4'd11: O_row_bits = 16'h1ff8;
++                    4'd12: O_row_bits = 16'h1ff8;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            CHAR_COLON: begin
++                case(I_row)
++                    4'd0: O_row_bits = 16'h0000;
++                    4'd1: O_row_bits = 16'h0000;
++                    4'd2: O_row_bits = 16'h0000;
++                    4'd3: O_row_bits = 16'h0000;
++                    4'd4: O_row_bits = 16'h0000;
++                    4'd5: O_row_bits = 16'h0000;
++                    4'd6: O_row_bits = 16'h0180;
++                    4'd7: O_row_bits = 16'h0180;
++                    4'd8: O_row_bits = 16'h0000;
++                    4'd9: O_row_bits = 16'h0000;
++                    4'd10: O_row_bits = 16'h0180;
++                    4'd11: O_row_bits = 16'h0180;
++                    4'd12: O_row_bits = 16'h0000;
++                    4'd13: O_row_bits = 16'h0000;
++                    4'd14: O_row_bits = 16'h0000;
++                    4'd15: O_row_bits = 16'h0000;
++                    default: O_row_bits = 16'h0000;
++                endcase
++            end
++            default: O_row_bits = 16'h0000;
++        endcase
++    end
++
++endmodule
++
+--- /dev/null
++++ example3/user_source/hdl_source/osd/osd_logo_rom.v
+@@ -0,0 +1,13 @@
++// Exact 160x160, 25-bit {opaque, RGB888} logo from example 3.
++// The synchronous ROM uses embedded memory instead of a large case decoder.
++module osd_logo_rom #(
++    parameter INIT_FILE = "../../../user_source/hdl_source/osd/anlogic_logo.hex"
++)(
++    input wire I_clk,
++    input wire [14:0] I_addr,
++    output reg [24:0] O_pixel
++);
++    reg [24:0] memory [0:25599]; // synthesis ram_style=bram
++    initial $readmemh(INIT_FILE, memory);
++    always @(posedge I_clk) O_pixel <= memory[I_addr];
++endmodule

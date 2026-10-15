@@ -1,0 +1,4 @@
+PASS: 3 TD project/run descriptions; 204 relative dependencies.
+PASS: 25600 valid logo words; synchronous ROM paths resolve from both TD run directories.
+PASS: 232 unchanged example-1 source/IP/constraint files, including ISP, DDR, alignment mixer, panel ROM and DSI.
+PASS: all 25600 logo alpha/RGB words and the character library match supplied example 3.
