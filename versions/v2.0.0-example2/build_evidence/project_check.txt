@@ -1,0 +1,2 @@
+PASS: 3 TD projects, 198 relative source/IP/constraint references; edge pipeline and defaults.
+PASS: 460800 cropped DDR word addresses across four frame buffers; 320 input beats / 240 DDR words per 720P row.

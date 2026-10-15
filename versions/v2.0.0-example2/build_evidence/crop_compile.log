@@ -1,0 +1,5 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex2_dsi/user_source/hdl_source/video_out.v" into library work
+INFO: [VRFC 10-311] analyzing module video_out
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex2_dsi/verification/crop_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module w128_d512_fifo
+INFO: [VRFC 10-311] analyzing module crop_tb

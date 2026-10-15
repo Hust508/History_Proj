@@ -14,6 +14,18 @@
       "archive_sha256": "66dde595976a282c095066703f92c66ac401d8168271d86d40b406b94ab9189e",
       "files": 267,
       "manifest_files_verified": 0
+    },
+    {
+      "version": "v2.0.0",
+      "title": "例程二：Sobel 边缘检测",
+      "repository": "Hust508/History_Proj",
+      "path": "versions/v2.0.0-example2",
+      "original_project": "ex2_dsi",
+      "delivery_date": "2026-10-14",
+      "archive": "downloads/lab_ex2_edge_DSI_SC500_7inch.zip",
+      "archive_sha256": "8396bdf4cca660cbab6e38205be0577695d86376987d32e071070f19245cc128",
+      "files": 273,
+      "manifest_files_verified": 272
     }
   ]
 }

@@ -1,0 +1,8 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex2_dsi/user_source/hdl_source/isp/edge_detect_96.v" into library work
+INFO: [VRFC 10-311] analyzing module edge_detect_96
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex2_dsi/user_source/hdl_source/data_96bit_to_128bit.v" into library work
+INFO: [VRFC 10-311] analyzing module data_96bit_to_128bit
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/Xuan/.codex/.chatgpt-projects/g-p-6ac6609d5fac8191bbfcec16e35eed57/ex2_dsi/verification/edge_pipeline_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module edge_pipeline_test
+INFO: [VRFC 10-311] analyzing module edge_small_tb
+INFO: [VRFC 10-311] analyzing module edge_720p_tb
