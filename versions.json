@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "import_date": "2026-10-15",
+  "version_numbering": "GitHub management stage numbers; original project revisions preserved",
+  "versions": [
+    {
+      "version": "v1.0.0",
+      "title": "例程一：彩色摄像头与 7 寸 DSI 屏",
+      "repository": "Hust508/History_Proj",
+      "path": "versions/v1.0.0-example1",
+      "original_project": "lab_ex1_mipi_dsi_SC500_7inch_v2",
+      "delivery_date": "2026-10-12",
+      "archive": "downloads/lab_ex1_mipi_dsi_SC500_7inch_v2.zip",
+      "archive_sha256": "66dde595976a282c095066703f92c66ac401d8168271d86d40b406b94ab9189e",
+      "files": 267,
+      "manifest_files_verified": 0
+    }
+  ]
+}
